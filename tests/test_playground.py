@@ -92,3 +92,17 @@ async def test_no_agent_is_lost_when_the_busiest_region_server_dies():
         assert w.snapshot()["stats"]["lost"] == 0
     finally:
         w.stop()
+
+
+async def test_agents_are_not_reported_lost_while_every_region_server_is_down():
+    w = World(lambda s: None, FAST)
+    w.start()
+    try:
+        await eventually(lambda: w.ready)
+        await eventually(lambda: w.spawned and len(w.snapshot()["agents"]) == 8, timeout=15)
+        for nid in w.ids:
+            w.kill(nid)
+        await eventually(lambda: not any(n["up"] for n in w.snapshot()["nodes"]))
+        assert w.snapshot()["stats"]["lost"] == 0  # their state is still on the crashed nodes
+    finally:
+        w.stop()

@@ -67,7 +67,7 @@ async def start(self):
         </div>
 
         <div className="stat-row">
-          <div className="stat"><b className="mono">51</b><span>automated tests</span></div>
+          <div className="stat"><b className="mono">52</b><span>automated tests</span></div>
           <div className="stat"><b className="mono">4</b><span>Raft groups running in the sharded world</span></div>
           <div className="stat"><b className="mono">0</b><span>servers behind this page. It all runs in your tab</span></div>
         </div>

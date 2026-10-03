@@ -488,7 +488,7 @@ class World(_Cluster):
             source = self.shards[leader][sid] if leader else max(replicas, key=lambda s: s.raft.last_applied(), default=None)
             agents = list(source.agents.values()) if source else []
             chosen.append((sid, agents))
-            seen.update(a.id for sm in replicas for a in sm.agents.values())
+            seen.update(a.id for n in self.ids for a in self.shards[n][sid].agents.values())  # crashed nodes keep their state
             shards.append({"id": sid, "leader": leader, "term": term})
         held: dict[str, int] = {}
         for _, agents in chosen:

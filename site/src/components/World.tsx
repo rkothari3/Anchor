@@ -49,9 +49,11 @@ export function World() {
         <div className="panel playground">
           <div className="panel-head">
             <span className="live"><i /> live · same engine, 4 Raft groups</span>
-            <p className={`banner ${intact ? "ok" : "stalled"}`} role="status">
+            <p className={`banner ${intact && snap?.nodes.some((n) => n.up) ? "ok" : "stalled"}`} role="status">
               <span className="banner-dot" aria-hidden="true" />
-              {stats ? (
+              {snap && !snap.nodes.some((n) => n.up) ? (
+                "All servers are down. Nothing is lost, and nothing runs until one restarts."
+              ) : stats ? (
                 <>
                   <b className="mono">{stats.total - stats.lost}/{stats.total}</b>&nbsp;agents · lost <b className="mono">{stats.lost}</b> · in transit <b className="mono">{stats.duplicated}</b>
                 </>
