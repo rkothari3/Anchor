@@ -70,6 +70,10 @@ class Raft:
         self._tasks: set[asyncio.Task] = set()
 
     async def start(self) -> None:
+        """Also how a crashed node comes back: term, vote and log survive (we're
+        in-memory, standing in for disk), but a restarted node is always a follower."""
+        self._role = Role.FOLLOWER
+        self._leader_id = ""
         self._last_contact = asyncio.get_running_loop().time()
         self._spawn(self._run())
         self._spawn(self._applier())
@@ -86,6 +90,18 @@ class Raft:
     def leader_hint(self) -> tuple[str, int]:
         """(leader_id, term) of the leader we last heard from; may be stale or empty."""
         return self._leader_id, self._current_term
+
+    @property
+    def role(self) -> Role:
+        return self._role
+
+    def commit_index(self) -> int:
+        """Index of the last entry known to be on a majority."""
+        return self._commit_index
+
+    def entries(self) -> list[LogEntry]:
+        """Every real entry in the log, oldest first (for visualisation)."""
+        return self._log[1:]
 
     def last_applied(self) -> int:
         """Index of the last entry handed to `apply`."""

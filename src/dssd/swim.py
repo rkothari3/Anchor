@@ -98,10 +98,17 @@ class Config:
 
 
 class Node:
-    """A SWIM agent. Call start() to begin probing and stop() to shut down."""
+    """A SWIM agent. Call start() to begin probing and stop() to shut down.
 
-    def __init__(self, config: Config) -> None:
+    By default it talks over a real UDP socket. Pass `listen` to run it on
+    any other datagram network (the browser demo uses an in-memory one): an
+    async function that takes our asyncio.DatagramProtocol and returns a
+    transport with sendto(), close() and get_extra_info("sockname").
+    """
+
+    def __init__(self, config: Config, listen=None) -> None:
         self.cfg = config
+        self._listen = listen
         self._members: dict[str, Member] = {}  # everyone but us
         self._incarnation = 0
         self._transport: asyncio.DatagramTransport | None = None
@@ -118,9 +125,13 @@ class Node:
         return self._bind_addr
 
     async def start(self) -> None:
-        loop = asyncio.get_running_loop()
-        local = (self.cfg.bind_host, self.cfg.bind_port)
-        self._transport, _ = await loop.create_datagram_endpoint(lambda: _Protocol(self), local_addr=local)
+        if self._listen is not None:
+            self._transport = await self._listen(_Protocol(self))
+        else:
+            local = (self.cfg.bind_host, self.cfg.bind_port)
+            self._transport, _ = await asyncio.get_running_loop().create_datagram_endpoint(
+                lambda: _Protocol(self), local_addr=local
+            )
         host, port = self._transport.get_extra_info("sockname")[:2]
         self._bind_addr = format_addr(host, port)
         self._spawn(self._every(self.cfg.protocol_period, self._probe_once))
