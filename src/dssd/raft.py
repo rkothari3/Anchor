@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Protocol
@@ -21,9 +22,6 @@ from dssd.spinepb import (
     RequestVoteArgs,
     RequestVoteReply,
 )
-
-RPC_TIMEOUT = 0.5  # seconds to wait for a peer's reply before giving up on it this round
-
 
 class Transport(Protocol):
     """How a Raft node reaches its peers: gRPC in production, a fake in tests."""
@@ -50,10 +48,10 @@ class Config:
 
 
 class Raft:
-    def __init__(self, config: Config, transport: Transport, apply_queue: asyncio.Queue[LogEntry]) -> None:
+    def __init__(self, config: Config, transport: Transport, apply: Callable[[LogEntry], None]) -> None:
         self.cfg = config
         self._transport = transport
-        self._apply_queue = apply_queue  # committed entries are delivered here, in order
+        self._apply = apply  # called with each committed entry, in log order
 
         self._current_term = 0
         self._voted_for = ""
@@ -70,7 +68,6 @@ class Raft:
         self._last_heartbeat_sent = 0.0
         self._apply_signal = asyncio.Event()
         self._tasks: set[asyncio.Task] = set()
-        self._stopped = False
 
     async def start(self) -> None:
         self._last_contact = asyncio.get_running_loop().time()
@@ -78,10 +75,6 @@ class Raft:
         self._spawn(self._applier())
 
     async def stop(self) -> None:
-        """Safe to call more than once."""
-        if self._stopped:
-            return
-        self._stopped = True
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
@@ -93,6 +86,10 @@ class Raft:
     def leader_hint(self) -> tuple[str, int]:
         """(leader_id, term) of the leader we last heard from; may be stale or empty."""
         return self._leader_id, self._current_term
+
+    def last_applied(self) -> int:
+        """Index of the last entry handed to `apply`."""
+        return self._last_applied
 
     def last_index(self) -> int:
         """Index of the last entry in our log, applied or not."""
@@ -158,7 +155,7 @@ class Raft:
         async def ask(peer: str) -> None:
             nonlocal votes
             try:
-                reply = await asyncio.wait_for(self._transport.request_vote(peer, args), RPC_TIMEOUT)
+                reply = await asyncio.wait_for(self._transport.request_vote(peer, args), 2 * self.cfg.heartbeat_interval)
             except Exception:  # noqa: BLE001 - unreachable peer: no vote this round
                 return
             if reply.term > self._current_term:
@@ -248,7 +245,7 @@ class Raft:
             leader_commit=self._commit_index,
         )
         try:
-            reply = await asyncio.wait_for(self._transport.append_entries(peer, args), RPC_TIMEOUT)
+            reply = await asyncio.wait_for(self._transport.append_entries(peer, args), 2 * self.cfg.heartbeat_interval)
         except Exception:  # noqa: BLE001 - unreachable peer: retry on the next heartbeat
             return
 
@@ -282,4 +279,4 @@ class Raft:
             self._apply_signal.clear()
             while self._last_applied < self._commit_index:
                 self._last_applied += 1
-                await self._apply_queue.put(self._log[self._last_applied])
+                self._apply(self._log[self._last_applied])

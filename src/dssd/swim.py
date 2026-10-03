@@ -65,7 +65,7 @@ class Message:
 
     type: MsgType
     seq: int
-    sender: Member | None = None  # receiving a message proves its sender is alive
+    sender: Member  # receiving a message proves its sender is alive
     target_addr: str = ""  # ping-req only
     updates: tuple[Member, ...] = ()  # piggybacked gossip
 
@@ -79,7 +79,7 @@ class Message:
         return Message(
             type=MsgType(obj["type"]),
             seq=obj["seq"],
-            sender=member(obj["sender"]) if obj["sender"] else None,
+            sender=member(obj["sender"]),
             target_addr=obj["target_addr"],
             updates=tuple(member(u) for u in obj["updates"]),
         )
@@ -110,11 +110,6 @@ class Node:
         self._seq_no = 0
         self._broadcasts: dict[str, list] = {}  # member id -> [latest update, times sent]
         self._tasks: set[asyncio.Task] = set()
-        self._stopped = False
-
-    @property
-    def id(self) -> str:
-        return self.cfg.id
 
     @property
     def addr(self) -> str:
@@ -132,10 +127,6 @@ class Node:
         self._spawn(self._every(self.cfg.resurrect_interval, self._resurrect_once))
 
     async def stop(self) -> None:
-        """Safe to call more than once."""
-        if self._stopped:
-            return
-        self._stopped = True
         if self._transport is not None:
             self._transport.close()
         for task in self._tasks:
@@ -205,7 +196,6 @@ class Node:
 
     async def _relay_ping(self, req: Message) -> None:
         """We were asked (ping-req) to ping a target on someone's behalf."""
-        assert req.sender is not None
         if await self._request(req.target_addr, MsgType.PING, self.cfg.ping_timeout):
             self._send(req.sender.addr, Message(MsgType.ACK, req.seq, self._me()))
 
@@ -249,8 +239,7 @@ class Node:
     # --- receiving ---
 
     def _handle(self, msg: Message) -> None:
-        if msg.sender is not None:
-            self._merge(msg.sender)
+        self._merge(msg.sender)
         for update in msg.updates:
             self._merge(update)
 
@@ -266,7 +255,6 @@ class Node:
                 waiter.set_result(None)
 
     def _reply(self, req: Message, msg_type: MsgType, updates: list[Member]) -> None:
-        assert req.sender is not None
         self._send(req.sender.addr, Message(msg_type, req.seq, self._me(), updates=tuple(updates)))
 
     def _merge(self, update: Member) -> None:

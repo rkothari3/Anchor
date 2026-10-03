@@ -8,6 +8,8 @@ those two steps can briefly duplicate an agent but never lose one.
 
 from __future__ import annotations
 
+from dataclasses import asdict
+
 import grpc
 
 from dssd import regionpb
@@ -38,7 +40,6 @@ class RegionOwnerService(regionpb.RegionOwnerServicer):
 async def request_handoff(dest_addr: str, shard_id: str, term: int, agent: AgentState) -> tuple[bool, str]:
     """Asks shard_id's (believed) leader to take the agent. Returns (accepted, reason)."""
     async with grpc.aio.insecure_channel(dest_addr) as channel:
-        pb_agent = regionpb.AgentState(id=agent.id, x=agent.x, y=agent.y, vx=agent.vx, vy=agent.vy)
-        request = regionpb.HandOffRequest(shard_id=shard_id, term=term, agent=pb_agent)
+        request = regionpb.HandOffRequest(shard_id=shard_id, term=term, agent=regionpb.AgentState(**asdict(agent)))
         reply = await regionpb.RegionOwnerStub(channel).HandOff(request, timeout=3.0)
     return reply.accepted, reply.reason

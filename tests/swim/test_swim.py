@@ -53,7 +53,7 @@ async def test_failure_detection():
 
         victim = nodes[2]
         await victim.stop()
-        await eventually(lambda: has_state(nodes[0], victim.id, State.DEAD))
+        await eventually(lambda: has_state(nodes[0], victim.cfg.id, State.DEAD))
     finally:
         await stop_all(nodes)
 
@@ -64,7 +64,7 @@ async def test_refutation_keeps_live_member_alive():
     try:
         node._merge(Member(id="a", addr=node.addr, state=State.SUSPECT, incarnation=0))
 
-        assert node._incarnation > 0
+        assert node.members()[0].incarnation > 0  # members()[0] is the node itself
         [me] = node.members()
         assert me.state == State.ALIVE
     finally:

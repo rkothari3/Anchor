@@ -196,36 +196,42 @@ async def test_two_agents_leaving_one_shard_in_the_same_tick():
         await stop_cluster(nodes)
 
 
-class _AgreeablePeers:
-    """A fake transport whose peers grant every vote and accept every entry."""
+class _SlowFollowers:
+    """Fake peers that grant every vote but only acknowledge appended
+    entries once `acking` is set, so the leader's log can run ahead of
+    what it has committed and applied."""
+
+    def __init__(self) -> None:
+        self.acking = False
 
     async def request_vote(self, peer_id, args):
         return spinepb.RequestVoteReply(term=args.term, vote_granted=True)
 
     async def append_entries(self, peer_id, args):
-        return spinepb.AppendEntriesReply(term=args.term, success=True)
+        return spinepb.AppendEntriesReply(term=args.term, success=self.acking)
 
 
 async def test_leader_refuses_to_snapshot_until_its_log_is_applied():
-    # A just-elected leader has committed entries it hasn't applied yet,
-    # so its in-memory agents are stale. Snapshotting from that state
-    # would erase the unapplied entries: an agent lost on failover.
+    # A just-elected leader's log holds entries it hasn't applied yet (here,
+    # its own election no-op), so its in-memory agents may be stale.
+    # Snapshotting from that state would erase entries still waiting to
+    # apply: an agent lost on failover.
+    peers = _SlowFollowers()
     cfg = raft.Config(
         id="n", peers=["p1", "p2"], election_timeout_min=0.02, election_timeout_max=0.04, heartbeat_interval=0.01
     )
-    sm = ShardStateMachine(cfg, _AgreeablePeers())
-    grid = GridConfig(width=10, height=10, cols=1, rows=1)
-    region = RegionServer(grid, {"0-0": sm}, {})
-    await sm.raft.start()  # Raft only: without the apply loop nothing is ever applied
+    sm = ShardStateMachine(cfg, peers)
+    region = RegionServer(GridConfig(width=10, height=10, cols=1, rows=1), {"0-0": sm}, {})
+    await sm.start()
     try:
         await eventually(sm.is_leader)
-        await eventually(lambda: not sm.caught_up())  # the election no-op is committed but unapplied
+        assert not sm.caught_up()  # the no-op can't commit while followers don't ack
 
         before = sm.raft.last_index()
         assert not await region.spawn_agent(AgentState("a", 1, 1, 0, 0))
         assert sm.raft.last_index() == before, "proposed a snapshot from stale state"
 
-        sm._apply_task = asyncio.create_task(sm._apply_loop())  # now let entries apply
+        peers.acking = True
         await eventually(sm.caught_up)
         assert await region.spawn_agent(AgentState("a", 1, 1, 0, 0))
     finally:

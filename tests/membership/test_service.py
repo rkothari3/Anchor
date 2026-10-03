@@ -27,14 +27,7 @@ class ClusterMember:
     async def start(self, addrs: dict[str, str]) -> None:
         peers = {id: addr for id, addr in addrs.items() if id != self.id}
         self.transport = GRPCTransport(peers)
-        config = RaftConfig(
-            id=self.id,
-            peers=list(peers),
-            election_timeout_min=0.15,
-            election_timeout_max=0.3,
-            heartbeat_interval=0.05,
-        )
-        self.raft = Raft(config, self.transport, asyncio.Queue())
+        self.raft = Raft(RaftConfig(id=self.id, peers=list(peers)), self.transport, apply=lambda entry: None)
         spinepb.add_MembershipServicer_to_server(MembershipService(self.swim), self.server)
         spinepb.add_RaftServicer_to_server(RaftService({"": self.raft}), self.server)
         await self.swim.start()

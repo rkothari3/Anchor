@@ -26,10 +26,18 @@ from dssd.swim import State as SwimState
 
 from .data import CharTokenizer, make_batch, synthetic_corpus
 from .model import ModelConfig, TinyGPT
-from .outer import pseudo_gradient
-from .trainer_service import TrainerService, state_from_pb, state_to_pb
+from .outer import StateDict, pseudo_gradient
+from .barrier import RoundBarrier
 
 logger = logging.getLogger("worker")
+
+
+def state_to_pb(state: StateDict) -> list[trainerpb.Tensor]:
+    return [trainerpb.Tensor(key=k, shape=list(v.shape), data=v.flatten().tolist()) for k, v in state.items()]
+
+
+def state_from_pb(tensors) -> StateDict:
+    return {t.key: torch.tensor(list(t.data), dtype=torch.float32).reshape(list(t.shape)) for t in tensors}
 
 
 class Worker(trainerpb.TrainerServicer):
@@ -59,15 +67,11 @@ class Worker(trainerpb.TrainerServicer):
         self.global_state = {k: v.clone() for k, v in self.model.state_dict().items()}
         self.round = 0
         self.last_loss: float | None = None
-        self._stopped = False
 
-        self._barrier: TrainerService | None = None
+        self._barrier: RoundBarrier | None = None
         self._barrier_term = -1
 
-    def stop(self) -> None:
-        self._stopped = True
-
-    async def _alive_members(self) -> list[str]:
+    def _alive_members(self) -> list[str]:
         return [m.id for m in self._swim.members() if m.state == SwimState.ALIVE]
 
     # --- server side: only the leader runs the outer-step barrier ---
@@ -84,12 +88,13 @@ class Worker(trainerpb.TrainerServicer):
             # left off. ponytail: the outer optimizer's momentum restarts on
             # each leader change; replicate it if that ever hurts convergence.
             global_state = {k: v.clone() for k, v in self.global_state.items()}
-            self._barrier = TrainerService(
+            self._barrier = RoundBarrier(
                 self._alive_members, global_state, round_timeout=self._round_timeout, start_round=self.round
             )
             self._barrier_term = term
         assert self._barrier is not None
-        return await self._barrier.Sync(request, context)
+        round_, state = await self._barrier.submit(request.worker_id, state_from_pb(request.pseudo_gradient))
+        return trainerpb.SyncResponse(round=round_, global_state=state_to_pb(state))
 
     async def Status(self, request, context) -> trainerpb.StatusResponse:
         resp = trainerpb.StatusResponse(round=self.round)
@@ -100,7 +105,7 @@ class Worker(trainerpb.TrainerServicer):
     # --- client side: train locally, then sync with the leader ---
 
     async def run(self) -> None:
-        while not self._stopped:
+        while True:
             # The PyTorch loop is CPU-bound with no awaits; running it in a
             # thread keeps this process's SWIM/Raft heartbeats flowing.
             await asyncio.to_thread(self._inner_train)
@@ -120,7 +125,7 @@ class Worker(trainerpb.TrainerServicer):
     async def _outer_sync(self) -> None:
         pseudo_grad = pseudo_gradient(self.global_state, self.model.state_dict())
 
-        while not self._stopped:
+        while True:
             leader_id, term = self._raft.leader_hint()
             leader_addr = self._peer_addrs.get(leader_id)
             if not leader_addr:
@@ -149,7 +154,7 @@ async def run(args: argparse.Namespace) -> None:
         await swim_node.join(resolve_addr(args.join))
 
     transport = GRPCTransport(peers)
-    raft_node = Raft(RaftConfig(id=args.id, peers=list(peers.keys())), transport, asyncio.Queue())
+    raft_node = Raft(RaftConfig(id=args.id, peers=list(peers.keys())), transport, apply=lambda entry: None)
     await raft_node.start()
 
     text = synthetic_corpus(args.corpus_length)
@@ -184,7 +189,6 @@ async def run(args: argparse.Namespace) -> None:
     await stop_requested.wait()
     logger.info("worker %s shutting down", args.id)
 
-    worker.stop()
     progress_task.cancel()
     train_task.cancel()
     await asyncio.gather(train_task, progress_task, return_exceptions=True)

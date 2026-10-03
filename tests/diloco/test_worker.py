@@ -8,8 +8,7 @@ import torch
 from dssd import spinepb, trainerpb
 from dssd.diloco.data import CharTokenizer, synthetic_corpus
 from dssd.diloco.model import ModelConfig
-from dssd.diloco.trainer_service import state_from_pb, state_to_pb
-from dssd.diloco.worker import Worker
+from dssd.diloco.worker import Worker, state_from_pb, state_to_pb
 from dssd.membership import GRPCTransport, MembershipService, RaftService
 from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
@@ -40,7 +39,6 @@ class WorkerHarness:
         if self.stopped:
             return
         self.stopped = True
-        self.worker.stop()
         if self.train_task is not None:
             self.train_task.cancel()
             await asyncio.gather(self.train_task, return_exceptions=True)
@@ -83,7 +81,7 @@ async def start_cluster(n: int, inner_steps: int = 5, batch_size: int = 8) -> li
                 heartbeat_interval=0.03,
             ),
             m.transport,
-            asyncio.Queue(),
+            lambda entry: None,
         )
         m.worker = Worker(
             m.id,
