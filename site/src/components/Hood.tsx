@@ -1,4 +1,4 @@
-const SRC = "https://github.com/rkothari3/DSSD/blob/main/src/dssd/";
+const SRC = "https://github.com/rkothari3/Anchor/blob/main/src/dssd/";
 
 const layers = [
   { name: "Applications", body: "DiLoCo trainer · sharded world", files: [["diloco/", "diloco"], ["sharding/", "sharding"]] },
