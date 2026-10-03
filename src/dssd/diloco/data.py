@@ -14,13 +14,9 @@ class CharTokenizer:
         chars = sorted(set(corpus))
         self.vocab_size = len(chars)
         self._stoi = {c: i for i, c in enumerate(chars)}
-        self._itos = {i: c for i, c in enumerate(chars)}
 
     def encode(self, text: str) -> list[int]:
         return [self._stoi[c] for c in text]
-
-    def decode(self, ids: list[int]) -> str:
-        return "".join(self._itos[i] for i in ids)
 
 
 def synthetic_corpus(length: int) -> str:

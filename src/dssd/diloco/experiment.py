@@ -16,7 +16,7 @@ from pathlib import Path
 from dssd.addr import parse_peers
 from dssd.dashboard.poller import Poller
 
-from .chaos import ChaosScheduler, pick_victim
+from .chaos import ChaosScheduler
 from .metrics import MetricsRecorder
 
 logger = logging.getLogger("experiment")
@@ -44,7 +44,7 @@ async def run(args: argparse.Namespace) -> None:
     pod_names = list(peer_addrs.keys())
 
     async def kill_fn(index: int) -> None:
-        victim = pick_victim(pod_names, rng)
+        victim = rng.choice(pod_names)
         logger.info("chaos: killing pod %s (%d/%d)", victim, index + 1, args.kills)
         await asyncio.to_thread(kubectl_delete_pod, victim, args.namespace)
 

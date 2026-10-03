@@ -45,8 +45,6 @@ class Worker:
         data: torch.Tensor,
         inner_steps: int = 20,
         batch_size: int = 16,
-        outer_lr: float = 0.7,
-        outer_momentum: float = 0.9,
         round_timeout: float = 15.0,
     ) -> None:
         self.id = worker_id
@@ -69,8 +67,6 @@ class Worker:
             raft_node,
             self._get_quorum,
             self.local_state,
-            lr=outer_lr,
-            momentum=outer_momentum,
             round_timeout=round_timeout,
         )
 

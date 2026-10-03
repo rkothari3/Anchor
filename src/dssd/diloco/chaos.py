@@ -5,15 +5,11 @@ the right wall-clock time - the "kill a random pod" driver behind the
 
 from __future__ import annotations
 
-import random
+import asyncio
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 
 KillFn = Callable[[int], Awaitable[None]]
-
-
-def pick_victim(names: Sequence[str], rng: random.Random) -> str:
-    return rng.choice(names)
 
 
 def kill_schedule(total_kills: int, duration: float) -> list[float]:
@@ -32,15 +28,11 @@ class ChaosScheduler:
         duration: float,
         kill_fn: KillFn,
         now: Callable[[], float] = time.monotonic,
-        sleep: Callable[[float], Awaitable[None]] | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._times = kill_schedule(total_kills, duration)
         self._kill_fn = kill_fn
         self._now = now
-        if sleep is None:
-            import asyncio
-
-            sleep = asyncio.sleep
         self._sleep = sleep
 
     async def run(self) -> None:

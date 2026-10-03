@@ -1,20 +1,6 @@
-import random
-
 import pytest
 
-from dssd.diloco.chaos import ChaosScheduler, kill_schedule, pick_victim
-
-
-def test_pick_victim_is_deterministic_given_a_seeded_rng():
-    names = ["worker-0", "worker-1", "worker-2"]
-    assert pick_victim(names, random.Random(1)) == pick_victim(names, random.Random(1))
-
-
-def test_pick_victim_always_returns_one_of_the_given_names():
-    names = ["worker-0", "worker-1", "worker-2"]
-    rng = random.Random(0)
-    for _ in range(20):
-        assert pick_victim(names, rng) in names
+from dssd.diloco.chaos import ChaosScheduler, kill_schedule
 
 
 def test_kill_schedule_spreads_evenly_across_the_run():

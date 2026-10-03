@@ -70,10 +70,9 @@ class ShardRaftTransport:
 
 
 class ShardRaftManager(regionpb.ShardRaftServicer):
-    """Hosts one Raft instance per shard in a static, known-upfront grid
-    (every node participates in every shard's election - see the
-    region-sharding design notes for why this is a deliberate scoping
-    choice, not an oversight)."""
+    """Hosts one Raft instance per shard in a static, known-upfront grid.
+    Every node participates in every shard's election: a deliberate
+    scoping choice, not an oversight."""
 
     def __init__(
         self,
