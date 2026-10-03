@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rtrainer.proto\x12\x0f\x64ssd.trainer.v1\"2\n\x06Tensor\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05shape\x18\x02 \x03(\x03\x12\x0c\n\x04\x64\x61ta\x18\x03 \x03(\x02\"o\n\x0bSyncRequest\x12\x11\n\tworker_id\x18\x01 \x01(\t\x12\r\n\x05round\x18\x02 \x01(\x04\x12\x30\n\x0fpseudo_gradient\x18\x03 \x03(\x0b\x32\x17.dssd.trainer.v1.Tensor\x12\x0c\n\x04term\x18\x04 \x01(\x04\"L\n\x0cSyncResponse\x12\r\n\x05round\x18\x01 \x01(\x04\x12-\n\x0cglobal_state\x18\x02 \x03(\x0b\x32\x17.dssd.trainer.v1.Tensor2N\n\x07Trainer\x12\x43\n\x04Sync\x12\x1c.dssd.trainer.v1.SyncRequest\x1a\x1d.dssd.trainer.v1.SyncResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rtrainer.proto\x12\x0f\x64ssd.trainer.v1\"2\n\x06Tensor\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05shape\x18\x02 \x03(\x03\x12\x0c\n\x04\x64\x61ta\x18\x03 \x03(\x02\"`\n\x0bSyncRequest\x12\x11\n\tworker_id\x18\x01 \x01(\t\x12\x30\n\x0fpseudo_gradient\x18\x02 \x03(\x0b\x32\x17.dssd.trainer.v1.Tensor\x12\x0c\n\x04term\x18\x03 \x01(\x04\"L\n\x0cSyncResponse\x12\r\n\x05round\x18\x01 \x01(\x04\x12-\n\x0cglobal_state\x18\x02 \x03(\x0b\x32\x17.dssd.trainer.v1.Tensor\"\x0f\n\rStatusRequest\";\n\x0eStatusResponse\x12\r\n\x05round\x18\x01 \x01(\x04\x12\x11\n\x04loss\x18\x02 \x01(\x02H\x00\x88\x01\x01\x42\x07\n\x05_loss2\x99\x01\n\x07Trainer\x12\x43\n\x04Sync\x12\x1c.dssd.trainer.v1.SyncRequest\x1a\x1d.dssd.trainer.v1.SyncResponse\x12I\n\x06Status\x12\x1e.dssd.trainer.v1.StatusRequest\x1a\x1f.dssd.trainer.v1.StatusResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,9 +34,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_TENSOR']._serialized_start=34
   _globals['_TENSOR']._serialized_end=84
   _globals['_SYNCREQUEST']._serialized_start=86
-  _globals['_SYNCREQUEST']._serialized_end=197
-  _globals['_SYNCRESPONSE']._serialized_start=199
-  _globals['_SYNCRESPONSE']._serialized_end=275
-  _globals['_TRAINER']._serialized_start=277
-  _globals['_TRAINER']._serialized_end=355
+  _globals['_SYNCREQUEST']._serialized_end=182
+  _globals['_SYNCRESPONSE']._serialized_start=184
+  _globals['_SYNCRESPONSE']._serialized_end=260
+  _globals['_STATUSREQUEST']._serialized_start=262
+  _globals['_STATUSREQUEST']._serialized_end=277
+  _globals['_STATUSRESPONSE']._serialized_start=279
+  _globals['_STATUSRESPONSE']._serialized_end=338
+  _globals['_TRAINER']._serialized_start=341
+  _globals['_TRAINER']._serialized_end=494
 # @@protoc_insertion_point(module_scope)

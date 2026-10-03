@@ -2,20 +2,26 @@
 
 ## Implementation Status
 
-This report was the design/planning document; the project itself was built out in
-Python on top of it. Final state:
+This report was the design document; the project was then built in Python on top of it.
 
-- **Implemented:** Stage 0 (Raft/SWIM groundwork), Stage 1 (membership spine: SWIM
-  failure detection + Raft leader election over gRPC), Stage 2 (DiLoCo inner/outer
-  training loop on a local `kind` Kubernetes cluster, with a chaos-kill scheduler and
-  the loss-vs-wall-clock plot at 0/5/20 kills), and Stage 3 (spatial sharding: per-shard
-  Raft ownership + fenced cross-shard agent hand-off).
-- **Not implemented — explicitly out of scope:** Stage 4 (optional real-cloud/multi-VM
-  chaos). It was scoped as optional in the original recommendations below, and was
-  dropped going forward since the core distributed-systems learning goals (failure
-  detection, consensus, sharding, fault-tolerant training) are already demonstrated
-  locally on `kind` at $0 cost. No multi-VM/multi-region chaos experiment exists in
-  this repo.
+- **Implemented:** Stage 1 (SWIM failure detection + Raft leader election), Stage 2
+  (DiLoCo training on a local `kind` cluster, surviving pod kills, with the
+  loss-vs-wall-clock data at 0/5/20 kills in `results/`), and Stage 3 (spatial
+  sharding: per-shard Raft ownership + fenced cross-shard agent hand-off).
+- **Not implemented:** Stage 4 (optional real-cloud chaos), and a dashboard (to be rebuilt).
+
+**Code map** (`src/dssd/`), in reading order:
+
+| File | What it is |
+|---|---|
+| `swim.py` | SWIM failure detector: ping, ping-req, suspicion, refutation, gossip |
+| `raft.py` | Raft leader election + log replication |
+| `membership.py` | gRPC glue: Raft transport/servicer, `GetMembers` |
+| `diloco/` | DiLoCo: `model.py`, `data.py`, `outer.py` (outer step), `trainer_service.py` (leader's round barrier), `worker.py` (`dssd-worker`), `experiment.py` (kill experiment) |
+| `sharding/` | `world.py` (grid), `shard_state.py` (one shard = one Raft group), `region_server.py` (tick + hand-off), `handoff.py`, `cli.py` (`dssd-region`) |
+| `proto/*.proto` | Wire formats; regenerate with `scripts/gen_protos.sh` |
+
+Run the tests with `pip install -e ".[dev]" && pytest`.
 
 ## TL;DR
 - **Build your OWN membership/failure-detection layer (SWIM-style gossip + heartbeats and a Raft-based leader election), and treat everything else — Kubernetes, gRPC, Prometheus/Grafana, PyTorch — as swappable plumbing.** The reusable "membership + quorum + failure-detection" service is both the genuine distributed-systems learning AND the architectural seam that lets Phase 1 and Phase 2 share a spine. This mirrors how Meta's `torchft` splits a standalone `torchft.coordination` module (Lighthouse + Manager quorum/heartbeat) from its training-specific ProcessGroup logic.

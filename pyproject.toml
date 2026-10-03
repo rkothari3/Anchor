@@ -1,26 +1,23 @@
 [project]
 name = "dssd"
 version = "0.1.0"
-description = "Fault-tolerant membership: SWIM failure detection + Raft leader election"
+description = "Learning distributed systems: SWIM, Raft, fault-tolerant DiLoCo training, and Raft-sharded simulation"
 requires-python = ">=3.11"
 dependencies = [
-    "grpcio>=1.66",
-    "protobuf>=5.27",
+    "grpcio>=1.84",  # must be >= the grpcio-tools that generated src/dssd/*pb
+    "protobuf>=7.35,<8",  # generated code pins the protobuf major
     "torch>=2.0",
     "numpy>=1.26",
-    "aiohttp>=3.9",
 ]
 
 [project.scripts]
-dssd-member = "dssd.cmd.member:main"
 dssd-worker = "dssd.diloco.worker:main"
-dssd-dashboard = "dssd.dashboard.server:main"
 dssd-region = "dssd.sharding.cli:main"
 dssd-experiment = "dssd.diloco.experiment:main"
 
 [project.optional-dependencies]
 dev = [
-    "grpcio-tools>=1.66",
+    "grpcio-tools>=1.84",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
@@ -35,9 +32,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-"dssd.dashboard" = ["static/*.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

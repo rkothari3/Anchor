@@ -1,12 +1,9 @@
 #!/bin/sh
 # Turns this pod's stable identity (its own hostname, from the
 # StatefulSet, and the fixed $PEERS list) into dssd-worker's CLI flags.
-# SWIM needs a numeric address to send UDP to, so it binds to $POD_IP
-# directly; gRPC peer addresses can stay as headless-service DNS names,
-# which the grpc resolver already handles. gRPC itself binds 0.0.0.0
-# (kubectl port-forward connects to localhost inside the pod netns, which
-# a socket bound only to POD_IP won't accept) but still advertises POD_IP
-# to peers via --advertise-host.
+# SWIM binds to $POD_IP so peers can reach it over UDP; gRPC peers are
+# headless-service DNS names. gRPC binds 0.0.0.0 so kubectl port-forward
+# (which connects to localhost inside the pod) works too.
 set -eu
 
 id="$(hostname)"
@@ -32,7 +29,6 @@ fi
 set -- --id="$id" \
   --swim-addr="${POD_IP}:${swim_port}" \
   --grpc-addr="0.0.0.0:${grpc_port}" \
-  --advertise-host="${POD_IP}" \
   $peer_args \
   "$@"
 

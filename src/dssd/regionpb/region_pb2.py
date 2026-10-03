@@ -24,31 +24,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cregion.proto\x12\x0e\x64ssd.region.v1\"w\n\x10ShardVoteRequest\x12\x10\n\x08shard_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12\x14\n\x0c\x63\x61ndidate_id\x18\x03 \x01(\t\x12\x16\n\x0elast_log_index\x18\x04 \x01(\x04\x12\x15\n\rlast_log_term\x18\x05 \x01(\x04\"4\n\x0eShardVoteReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x14\n\x0cvote_granted\x18\x02 \x01(\x08\"=\n\rShardLogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\r\n\x05index\x18\x02 \x01(\x04\x12\x0f\n\x07\x63ommand\x18\x03 \x01(\x0c\"\xbd\x01\n\x12ShardAppendRequest\x12\x10\n\x08shard_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12\x11\n\tleader_id\x18\x03 \x01(\t\x12\x16\n\x0eprev_log_index\x18\x04 \x01(\x04\x12\x15\n\rprev_log_term\x18\x05 \x01(\x04\x12.\n\x07\x65ntries\x18\x06 \x03(\x0b\x32\x1d.dssd.region.v1.ShardLogEntry\x12\x15\n\rleader_commit\x18\x07 \x01(\x04\"1\n\x10ShardAppendReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x0f\n\x07success\x18\x02 \x01(\x08\"F\n\nAgentState\x12\n\n\x02id\x18\x01 \x01(\t\x12\t\n\x01x\x18\x02 \x01(\x02\x12\t\n\x01y\x18\x03 \x01(\x02\x12\n\n\x02vx\x18\x04 \x01(\x02\x12\n\n\x02vy\x18\x05 \x01(\x02\"[\n\x0eHandOffRequest\x12\x10\n\x08shard_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12)\n\x05\x61gent\x18\x03 \x01(\x0b\x32\x1a.dssd.region.v1.AgentState\"3\n\x0fHandOffResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2\xb3\x01\n\tShardRaft\x12O\n\x0bRequestVote\x12 .dssd.region.v1.ShardVoteRequest\x1a\x1e.dssd.region.v1.ShardVoteReply\x12U\n\rAppendEntries\x12\".dssd.region.v1.ShardAppendRequest\x1a .dssd.region.v1.ShardAppendReply2Y\n\x0bRegionOwner\x12J\n\x07HandOff\x12\x1e.dssd.region.v1.HandOffRequest\x1a\x1f.dssd.region.v1.HandOffResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cregion.proto\x12\x0e\x64ssd.region.v1\"F\n\nAgentState\x12\n\n\x02id\x18\x01 \x01(\t\x12\t\n\x01x\x18\x02 \x01(\x01\x12\t\n\x01y\x18\x03 \x01(\x01\x12\n\n\x02vx\x18\x04 \x01(\x01\x12\n\n\x02vy\x18\x05 \x01(\x01\"[\n\x0eHandOffRequest\x12\x10\n\x08shard_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12)\n\x05\x61gent\x18\x03 \x01(\x0b\x32\x1a.dssd.region.v1.AgentState\"3\n\x0fHandOffResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2Y\n\x0bRegionOwner\x12J\n\x07HandOff\x12\x1e.dssd.region.v1.HandOffRequest\x1a\x1f.dssd.region.v1.HandOffResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'region_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_SHARDVOTEREQUEST']._serialized_start=32
-  _globals['_SHARDVOTEREQUEST']._serialized_end=151
-  _globals['_SHARDVOTEREPLY']._serialized_start=153
-  _globals['_SHARDVOTEREPLY']._serialized_end=205
-  _globals['_SHARDLOGENTRY']._serialized_start=207
-  _globals['_SHARDLOGENTRY']._serialized_end=268
-  _globals['_SHARDAPPENDREQUEST']._serialized_start=271
-  _globals['_SHARDAPPENDREQUEST']._serialized_end=460
-  _globals['_SHARDAPPENDREPLY']._serialized_start=462
-  _globals['_SHARDAPPENDREPLY']._serialized_end=511
-  _globals['_AGENTSTATE']._serialized_start=513
-  _globals['_AGENTSTATE']._serialized_end=583
-  _globals['_HANDOFFREQUEST']._serialized_start=585
-  _globals['_HANDOFFREQUEST']._serialized_end=676
-  _globals['_HANDOFFRESPONSE']._serialized_start=678
-  _globals['_HANDOFFRESPONSE']._serialized_end=729
-  _globals['_SHARDRAFT']._serialized_start=732
-  _globals['_SHARDRAFT']._serialized_end=911
-  _globals['_REGIONOWNER']._serialized_start=913
-  _globals['_REGIONOWNER']._serialized_end=1002
+  _globals['_AGENTSTATE']._serialized_start=32
+  _globals['_AGENTSTATE']._serialized_end=102
+  _globals['_HANDOFFREQUEST']._serialized_start=104
+  _globals['_HANDOFFREQUEST']._serialized_end=195
+  _globals['_HANDOFFRESPONSE']._serialized_start=197
+  _globals['_HANDOFFRESPONSE']._serialized_end=248
+  _globals['_REGIONOWNER']._serialized_start=250
+  _globals['_REGIONOWNER']._serialized_end=339
 # @@protoc_insertion_point(module_scope)

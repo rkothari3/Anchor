@@ -1,6 +1,6 @@
-"""Ties the pieces together: for each shard this node currently leads,
-advance its agents one tick, hand off any that crossed into a
-neighboring shard's region, and replicate the result.
+"""Runs the simulation for every shard this node currently leads: move the
+agents one tick, hand off any that crossed into a neighbouring shard, and
+replicate the result through that shard's Raft log.
 """
 
 from __future__ import annotations
@@ -16,110 +16,72 @@ from .world import AgentState, GridConfig
 
 logger = logging.getLogger("region")
 
+DT = 1.0  # simulated time per tick
+
 
 class RegionServer:
     def __init__(
         self,
-        node_id: str,
         grid: GridConfig,
-        state_machines: dict[str, ShardStateMachine],
-        peer_grpc_addrs: dict[str, str],
+        shards: dict[str, ShardStateMachine],
+        peer_addrs: dict[str, str],  # node id -> grpc addr, for hand-offs
         tick_interval: float = 0.2,
-        dt: float = 1.0,
     ) -> None:
-        self.node_id = node_id
         self.grid = grid
-        self.state_machines = state_machines
-        self.peer_grpc_addrs = peer_grpc_addrs
+        self.shards = shards
+        self.peer_addrs = peer_addrs
         self.tick_interval = tick_interval
-        self.dt = dt
-        self._stopped = False
 
     async def spawn_agent(self, agent: AgentState) -> bool:
-        """Injects an agent into whichever shard it currently belongs
-        to, if this node happens to be that shard's leader. Returns
-        whether it durably took effect here.
-
-        Unlike the routine tick loop (which fires-and-forgets each
-        propose, since a missed tick is harmless - the next one just
-        catches up), this is a one-time, no-retry placement: it waits
-        for the entry to actually commit, the same way HandOff does,
-        so a caller that sees True back can't lose the agent to a leader
-        crash a moment later.
-        """
-        shard_id = agent.shard_id(self.grid)
-        sm = self.state_machines.get(shard_id)
-        if sm is None or not sm.raft.state()[1]:
-            return False
-        async with sm.lock:
-            if not await sm.wait_caught_up():
-                return False
-            sm.agents[agent.id] = agent
-            if await sm.propose_and_confirm():
-                return True
-            del sm.agents[agent.id]
-            return False
-
-    def stop(self) -> None:
-        self._stopped = True
+        """Places an agent in its shard, if we lead that shard. True once durable."""
+        shard = self.shards[agent.shard_id(self.grid)]
+        return shard.is_leader() and await shard.add_agent(agent)
 
     async def run(self) -> None:
-        while not self._stopped:
+        while True:
             await asyncio.sleep(self.tick_interval)
-            await self._tick_once()
+            await self.tick()
 
-    async def _tick_once(self) -> None:
-        # Two phases across every shard this node owns, not interleaved
-        # per shard: if a single node leads more than one shard, an
-        # agent handed off from shard A to shard B mid-cycle must not
-        # then also get advanced during B's movement phase in this same
-        # cycle - it would move twice in one tick. Computing every
-        # shard's movement before attempting any hand-off makes that
-        # impossible: a hand-off's destination was already ticked (or
-        # skipped, if not ours) before it can receive anything new.
-        departures: list[tuple[str, ShardStateMachine, AgentState, str]] = []
-        for shard_id, sm in self.state_machines.items():
-            if not sm.raft.state()[1]:
+    async def tick(self) -> None:
+        # Phase 1: move agents in every shard we lead and replicate. Done for
+        # all shards before any hand-off, so an agent handed from one of our
+        # shards to another of ours can't be moved twice in one tick.
+        departures: list[tuple[ShardStateMachine, AgentState, str]] = []
+        for shard_id, shard in self.shards.items():
+            if not shard.is_leader():
                 continue
-            async with sm.lock:
-                if not sm.caught_up():
-                    continue
-                for agent in list(sm.agents.values()):
-                    agent.step(self.dt, self.grid)
-                    new_shard_id = agent.shard_id(self.grid)
-                    if new_shard_id != shard_id:
-                        departures.append((shard_id, sm, agent, new_shard_id))
-                # Commit this tick's movement first, including agents
-                # that have geometrically crossed a boundary: they stay
-                # authoritatively ours until a hand-off actually
-                # confirms elsewhere, per our commit-at-destination-
-                # before-remove-at-source policy.
-                sm.propose_tick()
+            async with shard.lock:
+                if not shard.caught_up():
+                    continue  # still applying a previous leader's entries; try next tick
+                for agent in shard.agents.values():
+                    agent.step(DT, self.grid)
+                    if agent.shard_id(self.grid) != shard_id:
+                        departures.append((shard, agent, agent.shard_id(self.grid)))
+                # Crossers stay ours until the destination confirms; we only
+                # remove them after (a crash in between duplicates, never loses).
+                shard.propose_tick()
 
-        touched: set[ShardStateMachine] = set()
-        for shard_id, sm, agent, dest_shard_id in departures:
-            accepted, reason = await self._handoff(agent, dest_shard_id)
+        # Phase 2: hand off each crosser; remove it here only once accepted.
+        handed_off: dict[ShardStateMachine, list[str]] = {}
+        for shard, agent, dest in departures:
+            accepted, reason = await self._handoff(agent, dest)
             if accepted:
-                async with sm.lock:
-                    sm.agents.pop(agent.id, None)
-                touched.add(sm)
-                logger.info("handoff of %s from %s to %s accepted", agent.id, shard_id, dest_shard_id)
-            else:
-                logger.info("handoff of %s from %s to %s deferred: %s", agent.id, shard_id, dest_shard_id, reason)
-
-        for sm in touched:
-            async with sm.lock:
-                sm.propose_tick()
+                handed_off.setdefault(shard, []).append(agent.id)
+            logger.info("handoff %s -> %s: %s", agent.id, dest, "accepted" if accepted else f"deferred ({reason})")
+        for shard, agent_ids in handed_off.items():
+            async with shard.lock:
+                # Apply our own phase-1 snapshot first: if it applied after we
+                # removed the agents, it would bring them back.
+                if await shard.wait_caught_up():
+                    for agent_id in agent_ids:
+                        shard.agents.pop(agent_id, None)
+                    shard.propose_tick()
 
     async def _handoff(self, agent: AgentState, dest_shard_id: str) -> tuple[bool, str]:
-        dest_sm = self.state_machines.get(dest_shard_id)
-        if dest_sm is None:
-            return False, f"unknown shard {dest_shard_id}"
-        leader_id, term = dest_sm.raft.leader_hint()
-        dest_addr = self.peer_grpc_addrs.get(leader_id)
-        if not dest_addr:
+        leader_id, term = self.shards[dest_shard_id].raft.leader_hint()
+        if leader_id not in self.peer_addrs:
             return False, "destination leader unknown"
         try:
-            return await request_handoff(dest_addr, dest_shard_id, term, agent)
+            return await request_handoff(self.peer_addrs[leader_id], dest_shard_id, term, agent)
         except grpc.aio.AioRpcError as err:
             return False, str(err.code())

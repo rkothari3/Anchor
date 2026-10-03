@@ -1,8 +1,8 @@
-"""A DiLoCo worker: runs its own membership-spine node (SWIM + Raft +
-gRPC) alongside the DiLoCo inner/outer training loop, discovering and
-following the current Raft leader as the outer-step coordinator so
-training keeps going - without a restart - when a worker, even the
-leader, dies.
+"""A DiLoCo worker. Each worker runs its own membership-spine node (SWIM +
+Raft), trains locally, and syncs with whoever is currently the Raft
+leader. Every worker also serves the Trainer gRPC service, but only the
+leader answers Sync, so training keeps going without a restart when any
+worker, even the leader, dies.
 """
 
 from __future__ import annotations
@@ -14,10 +14,9 @@ import logging
 import grpc
 import torch
 
-from dssd import dashboardpb, spinepb, trainerpb
-from dssd.addr import parse_peers, resolve_addr, split_addr
-from dssd.membership import GRPCTransport
-from dssd.membership import Service as MembershipService
+from dssd import spinepb, trainerpb
+from dssd.addr import parse_peers, resolve_addr, self_addr, split_addr
+from dssd.membership import GRPCTransport, MembershipService, RaftService
 from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
 from dssd.shutdown import install_shutdown_handler
@@ -26,15 +25,22 @@ from dssd.swim import Node as SwimNode
 from dssd.swim import State as SwimState
 
 from .data import CharTokenizer, make_batch, synthetic_corpus
-from .gated_trainer import LeaderGatedTrainerService
 from .model import ModelConfig, TinyGPT
-from .outer import pseudo_gradient
-from .trainer_service import state_from_pb, state_to_pb
+from .outer import StateDict, pseudo_gradient
+from .barrier import RoundBarrier
 
 logger = logging.getLogger("worker")
 
 
-class Worker:
+def state_to_pb(state: StateDict) -> list[trainerpb.Tensor]:
+    return [trainerpb.Tensor(key=k, shape=list(v.shape), data=v.flatten().tolist()) for k, v in state.items()]
+
+
+def state_from_pb(tensors) -> StateDict:
+    return {t.key: torch.tensor(list(t.data), dtype=torch.float32).reshape(list(t.shape)) for t in tensors}
+
+
+class Worker(trainerpb.TrainerServicer):
     def __init__(
         self,
         worker_id: str,
@@ -61,89 +67,80 @@ class Worker:
         self.global_state = {k: v.clone() for k, v in self.model.state_dict().items()}
         self.round = 0
         self.last_loss: float | None = None
-        self._stopped = False
 
-        self.trainer_servicer = LeaderGatedTrainerService(
-            raft_node,
-            self._get_quorum,
-            self.local_state,
-            round_timeout=round_timeout,
-        )
+        self._barrier: RoundBarrier | None = None
+        self._barrier_term = -1
 
-    def local_state(self):
-        return {k: v.clone() for k, v in self.global_state.items()}
-
-    async def _get_quorum(self) -> list[str]:
+    def _alive_members(self) -> list[str]:
         return [m.id for m in self._swim.members() if m.state == SwimState.ALIVE]
 
-    def stop(self) -> None:
-        self._stopped = True
+    # --- server side: only the leader runs the outer-step barrier ---
+
+    async def Sync(self, request: trainerpb.SyncRequest, context) -> trainerpb.SyncResponse:
+        term, is_leader = self._raft.state()
+        if not is_leader or request.term != term:
+            # Fencing: a worker talking to a replaced leader (or using an
+            # old term) is turned away instead of corrupting the round.
+            await context.abort(grpc.StatusCode.FAILED_PRECONDITION, f"not the leader for term {request.term}")
+        if self._barrier_term != term:
+            # New term: start a fresh barrier from this node's own latest
+            # global state and round, so training continues where the group
+            # left off. ponytail: the outer optimizer's momentum restarts on
+            # each leader change; replicate it if that ever hurts convergence.
+            global_state = {k: v.clone() for k, v in self.global_state.items()}
+            self._barrier = RoundBarrier(
+                self._alive_members, global_state, round_timeout=self._round_timeout, start_round=self.round
+            )
+            self._barrier_term = term
+        assert self._barrier is not None
+        round_, state = await self._barrier.submit(request.worker_id, state_from_pb(request.pseudo_gradient))
+        return trainerpb.SyncResponse(round=round_, global_state=state_to_pb(state))
+
+    async def Status(self, request, context) -> trainerpb.StatusResponse:
+        resp = trainerpb.StatusResponse(round=self.round)
+        if self.last_loss is not None:
+            resp.loss = self.last_loss
+        return resp
+
+    # --- client side: train locally, then sync with the leader ---
 
     async def run(self) -> None:
-        while not self._stopped:
-            # Runs on a worker thread: it's synchronous, CPU-bound
-            # PyTorch code with no await points, and this process's own
-            # SWIM/Raft/gRPC handling shares this event loop - running
-            # it inline would stall heartbeats and probes long enough to
-            # trigger spurious elections and false failure suspicions.
+        while True:
+            # The PyTorch loop is CPU-bound with no awaits; running it in a
+            # thread keeps this process's SWIM/Raft heartbeats flowing.
             await asyncio.to_thread(self._inner_train)
             await self._outer_sync()
 
     def _inner_train(self) -> None:
         self.model.load_state_dict(self.global_state)
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=3e-3)
-        loss = None
         for _ in range(self._inner_steps):
             x, y = make_batch(self._data, self._block_size, self._batch_size)
             optimizer.zero_grad()
             _, loss = self.model(x, y)
             loss.backward()
             optimizer.step()
-        self.last_loss = loss.item() if loss is not None else None
+        self.last_loss = loss.item()
 
     async def _outer_sync(self) -> None:
         pseudo_grad = pseudo_gradient(self.global_state, self.model.state_dict())
 
-        while not self._stopped:
+        while True:
             leader_id, term = self._raft.leader_hint()
             leader_addr = self._peer_addrs.get(leader_id)
             if not leader_addr:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.1)  # no leader yet
                 continue
-
             try:
                 async with grpc.aio.insecure_channel(leader_addr) as channel:
-                    stub = trainerpb.TrainerStub(channel)
-                    request = trainerpb.SyncRequest(
-                        worker_id=self.id,
-                        round=self.round,
-                        term=term,
-                        pseudo_gradient=state_to_pb(pseudo_grad),
-                    )
-                    resp = await stub.Sync(request, timeout=self._round_timeout + 5.0)
+                    request = trainerpb.SyncRequest(worker_id=self.id, term=term, pseudo_gradient=state_to_pb(pseudo_grad))
+                    resp = await trainerpb.TrainerStub(channel).Sync(request, timeout=self._round_timeout + 5.0)
                 self.global_state = state_from_pb(resp.global_state)
                 self.round = resp.round
                 return
             except grpc.aio.AioRpcError as err:
                 logger.info("worker %s: sync with %s failed (%s), retrying", self.id, leader_addr, err.code())
                 await asyncio.sleep(0.2)
-
-
-class WorkerStatusService(dashboardpb.WorkerStatusServicer):
-    """Lets external tooling (the live dashboard) read a worker's
-    training progress without scraping logs."""
-
-    def __init__(self, worker: Worker) -> None:
-        self._worker = worker
-
-    async def GetStatus(self, request, context) -> dashboardpb.GetStatusResponse:
-        loss = self._worker.last_loss
-        return dashboardpb.GetStatusResponse(
-            worker_id=self._worker.id,
-            round=self._worker.round,
-            loss=loss if loss is not None else 0.0,
-            has_loss=loss is not None,
-        )
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -157,43 +154,25 @@ async def run(args: argparse.Namespace) -> None:
         await swim_node.join(resolve_addr(args.join))
 
     transport = GRPCTransport(peers)
-    apply_queue: asyncio.Queue = asyncio.Queue()
-    raft_node = Raft(RaftConfig(id=args.id, peers=list(peers.keys())), transport, apply_queue)
+    raft_node = Raft(RaftConfig(id=args.id, peers=list(peers.keys())), transport, apply=lambda entry: None)
     await raft_node.start()
-
-    membership_service = MembershipService(swim_node, raft_node)
-    membership_service.start()
 
     text = synthetic_corpus(args.corpus_length)
     tokenizer = CharTokenizer(text)
     data = torch.tensor(tokenizer.encode(text), dtype=torch.long)
-    model_cfg = ModelConfig(vocab_size=tokenizer.vocab_size, block_size=32, n_embd=32, n_head=2, n_layer=2)
+    model_cfg = ModelConfig(vocab_size=tokenizer.vocab_size)
 
     server = grpc.aio.server()
-    spinepb.add_MembershipServicer_to_server(membership_service, server)
-    spinepb.add_RaftServicer_to_server(membership_service, server)
-    grpc_host, _ = split_addr(args.grpc_addr)
     grpc_port = server.add_insecure_port(args.grpc_addr)
-    advertise_host = args.advertise_host or grpc_host
-
-    peer_addrs = dict(peers)
-    peer_addrs[args.id] = f"{advertise_host}:{grpc_port}"
-
+    peer_addrs = {**peers, args.id: self_addr(args.grpc_addr, grpc_port)}  # the leader may be this very process
     worker = Worker(
-        args.id,
-        swim_node,
-        raft_node,
-        peer_addrs,
-        model_cfg,
-        data,
-        inner_steps=args.inner_steps,
-        batch_size=args.batch_size,
+        args.id, swim_node, raft_node, peer_addrs, model_cfg, data, inner_steps=args.inner_steps, batch_size=args.batch_size
     )
-    trainerpb.add_TrainerServicer_to_server(worker.trainer_servicer, server)
-    dashboardpb.add_WorkerStatusServicer_to_server(WorkerStatusService(worker), server)
-
+    spinepb.add_MembershipServicer_to_server(MembershipService(swim_node), server)
+    spinepb.add_RaftServicer_to_server(RaftService({"": raft_node}), server)
+    trainerpb.add_TrainerServicer_to_server(worker, server)
     await server.start()
-    logger.info("worker %s up: swim=%s grpc=%s:%d peers=%s", args.id, swim_node.addr, grpc_host, grpc_port, list(peers.keys()))
+    logger.info("worker %s up: swim=%s grpc port=%d peers=%s", args.id, swim_node.addr, grpc_port, list(peers))
 
     train_task = asyncio.create_task(worker.run())
 
@@ -207,16 +186,13 @@ async def run(args: argparse.Namespace) -> None:
 
     stop_requested = asyncio.Event()
     install_shutdown_handler(stop_requested)
-
     await stop_requested.wait()
     logger.info("worker %s shutting down", args.id)
 
-    worker.stop()
     progress_task.cancel()
     train_task.cancel()
     await asyncio.gather(train_task, progress_task, return_exceptions=True)
     await server.stop(grace=2)
-    await membership_service.stop()
     await raft_node.stop()
     await swim_node.stop()
     await transport.close()
@@ -227,13 +203,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--id", required=True, help="unique worker id")
     parser.add_argument("--swim-addr", default="127.0.0.1:0", help="UDP address for SWIM gossip")
-    parser.add_argument("--grpc-addr", default="127.0.0.1:0", help="TCP address for the gRPC membership/raft/trainer API")
-    parser.add_argument(
-        "--advertise-host",
-        default="",
-        help="host to advertise for this worker's own gRPC address, if different from --grpc-addr's "
-        "bind host (e.g. bind 0.0.0.0 so kubectl port-forward works, advertise the pod IP to peers)",
-    )
+    parser.add_argument("--grpc-addr", default="127.0.0.1:0", help="TCP address for the gRPC API")
     parser.add_argument("--join", default="", help="SWIM address of an existing member to bootstrap from")
     parser.add_argument("--peer", action="append", default=[], help="peer as id=grpc-host:port; repeat for each peer")
     parser.add_argument("--inner-steps", type=int, default=20, help="local AdamW steps per outer sync")

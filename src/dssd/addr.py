@@ -42,3 +42,10 @@ def parse_peers(values: list[str]) -> dict[str, str]:
         peer_id, addr = value.split("=", 1)
         peers[peer_id] = addr
     return peers
+
+
+def self_addr(bind_addr: str, port: int) -> str:
+    """How this process dials its own gRPC server: the bind host, unless
+    that's a wildcard (0.0.0.0 / ::), which isn't dialable."""
+    host, _ = split_addr(bind_addr)
+    return format_addr("127.0.0.1" if host in ("0.0.0.0", "::", "") else host, port)

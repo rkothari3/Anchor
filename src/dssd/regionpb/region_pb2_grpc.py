@@ -5,7 +5,7 @@ import warnings
 
 from . import region_pb2 as region__pb2
 
-GRPC_GENERATED_VERSION = '1.83.0'
+GRPC_GENERATED_VERSION = '1.84.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -23,130 +23,6 @@ if _version_not_supported:
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
     )
-
-
-class ShardRaftStub:
-    """ShardRaft carries Raft's RequestVote/AppendEntries for one specific
-    shard's leader election, tagged by shard_id so a single gRPC server
-    can dispatch to the right Raft instance among many hosted per node.
-    """
-
-    def __init__(self, channel):
-        """Constructor.
-
-        Args:
-            channel: A grpc.Channel.
-        """
-        self.RequestVote = channel.unary_unary(
-                '/dssd.region.v1.ShardRaft/RequestVote',
-                request_serializer=region__pb2.ShardVoteRequest.SerializeToString,
-                response_deserializer=region__pb2.ShardVoteReply.FromString,
-                _registered_method=True)
-        self.AppendEntries = channel.unary_unary(
-                '/dssd.region.v1.ShardRaft/AppendEntries',
-                request_serializer=region__pb2.ShardAppendRequest.SerializeToString,
-                response_deserializer=region__pb2.ShardAppendReply.FromString,
-                _registered_method=True)
-
-
-class ShardRaftServicer:
-    """ShardRaft carries Raft's RequestVote/AppendEntries for one specific
-    shard's leader election, tagged by shard_id so a single gRPC server
-    can dispatch to the right Raft instance among many hosted per node.
-    """
-
-    def RequestVote(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def AppendEntries(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-
-def add_ShardRaftServicer_to_server(servicer, server):
-    rpc_method_handlers = {
-            'RequestVote': grpc.unary_unary_rpc_method_handler(
-                    servicer.RequestVote,
-                    request_deserializer=region__pb2.ShardVoteRequest.FromString,
-                    response_serializer=region__pb2.ShardVoteReply.SerializeToString,
-            ),
-            'AppendEntries': grpc.unary_unary_rpc_method_handler(
-                    servicer.AppendEntries,
-                    request_deserializer=region__pb2.ShardAppendRequest.FromString,
-                    response_serializer=region__pb2.ShardAppendReply.SerializeToString,
-            ),
-    }
-    generic_handler = grpc.method_handlers_generic_handler(
-            'dssd.region.v1.ShardRaft', rpc_method_handlers)
-    server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('dssd.region.v1.ShardRaft', rpc_method_handlers)
-
-
- # This class is part of an EXPERIMENTAL API.
-class ShardRaft:
-    """ShardRaft carries Raft's RequestVote/AppendEntries for one specific
-    shard's leader election, tagged by shard_id so a single gRPC server
-    can dispatch to the right Raft instance among many hosted per node.
-    """
-
-    @staticmethod
-    def RequestVote(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.region.v1.ShardRaft/RequestVote',
-            region__pb2.ShardVoteRequest.SerializeToString,
-            region__pb2.ShardVoteReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def AppendEntries(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.region.v1.ShardRaft/AppendEntries',
-            region__pb2.ShardAppendRequest.SerializeToString,
-            region__pb2.ShardAppendReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
 
 
 class RegionOwnerStub:
