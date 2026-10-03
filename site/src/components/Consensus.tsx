@@ -14,24 +14,26 @@ const DEFAULT_LATENCY = 0.08;
 
 const ROLE_COLOR = { leader: "var(--accent)", candidate: "var(--blue)", follower: "var(--text)" } as const;
 
-function Node({ n, at, snap }: { n: ConsensusNode; at: Pt; snap: ConsensusSnapshot }) {
+function Node({ n, at, snap, valid }: { n: ConsensusNode; at: Pt; snap: ConsensusSnapshot; valid: boolean }) {
   const b = belief(n.id, snap);
-  const color = !n.up ? "var(--faint)" : ROLE_COLOR[n.role];
+  // A leader that can't reach a majority (or was out-termed) keeps its title until it hears a newer term.
+  const stale = n.up && n.role === "leader" && !valid;
+  const color = !n.up ? "var(--faint)" : stale ? "var(--amber)" : ROLE_COLOR[n.role];
   const toggle = () => (n.up ? engine.call("consensus", "kill", n.id) : engine.call("consensus", "revive", n.id));
-  const label = `${n.id}, ${roleLabel(n)}, term ${n.term}. ${n.up ? "Press to crash this node" : "Press to restart this node"}`;
+  const label = `${n.id}, ${stale ? "stale leader" : roleLabel(n)}, term ${n.term}. ${n.up ? "Press to crash this node" : "Press to restart this node"}`;
   const beliefColor = b === "dead" ? "var(--red)" : b === "suspect" ? "var(--amber)" : "var(--faint)";
   return (
+    <g transform={`translate(${at.x} ${at.y})`}>
+      {n.role === "leader" && n.up && !stale && <circle className="halo" r={46} fill="none" stroke="var(--accent)" aria-hidden="true" pointerEvents="none" />}
     <g
       className={`node ${n.up ? "" : "down"}`}
-      transform={`translate(${at.x} ${at.y})`}
       role="button"
       tabIndex={0}
       aria-label={label}
       onClick={toggle}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle())}
     >
-      {n.role === "leader" && n.up && <circle className="halo" r={46} fill="none" stroke="var(--accent)" />}
-      <circle r={34} className="node-body" fill={n.role === "leader" && n.up ? "var(--accent-dim)" : "var(--surface)"} stroke={color} strokeWidth={n.role === "follower" || !n.up ? 1.5 : 2.5} strokeDasharray={n.up ? undefined : "4 4"} />
+      <circle r={34} className="node-body" fill={n.role === "leader" && n.up && !stale ? "var(--accent-dim)" : "var(--surface)"} stroke={color} strokeWidth={n.role === "follower" || !n.up ? 1.5 : 2.5} strokeDasharray={n.up ? undefined : "4 4"} />
       {b !== "alive" && <circle r={40} fill="none" stroke={beliefColor} strokeWidth={1.5} strokeDasharray="2 5" strokeLinecap="round" />}
       <text className="node-id mono" textAnchor="middle" y={-3} fill={n.up ? "var(--text)" : "var(--faint)"}>
         {n.id}
@@ -40,13 +42,14 @@ function Node({ n, at, snap }: { n: ConsensusNode; at: Pt; snap: ConsensusSnapsh
         {n.up ? `term ${n.term}` : "crashed"}
       </text>
       <text className="node-role" textAnchor="middle" y={-52} fill={color}>
-        {n.up ? n.role : ""}
+        {stale ? "stale leader" : n.up ? n.role : ""}
       </text>
       {b !== "alive" && (
         <text className="node-belief mono" textAnchor="middle" y={60} fill={beliefColor}>
           {b === "dead" ? "declared dead" : "suspected"}
         </text>
       )}
+    </g>
     </g>
   );
 }
@@ -116,6 +119,7 @@ export function Consensus() {
   }, [snap?.nodes.length]);
 
   const cut = snap ? partitioned(snap) : false;
+  const q = snap ? quorum(snap) : null;
   const live = snap && status === "ready";
   const call = (method: string, ...args: unknown[]) => engine.call("consensus", method, ...args);
 
@@ -150,7 +154,7 @@ export function Consensus() {
                     )),
                   )}
                 {snap && <PacketLayer packets={consensus.packets} pos={pos} />}
-                {snap?.nodes.map((n) => <Node key={n.id} n={n} at={pos(n.id)!} snap={snap} />)}
+                {snap?.nodes.map((n) => <Node key={n.id} n={n} at={pos(n.id)!} snap={snap} valid={q?.kind === "ok" && q.leader === n.id} />)}
               </svg>
               {!live && <Boot />}
               <ul className="legend" aria-label="Legend">

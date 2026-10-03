@@ -44,6 +44,8 @@ test("a 2|3 split leaves only the majority able to commit", async ({ page }) => 
   await expect(banner(page)).toContainText("Quorum");
   await page.getByRole("button", { name: /Split network/ }).click();
   await expect(banner(page)).toContainText(/3 of 5 nodes reach leader n[345]/, { timeout: 30_000 });
+  // a leader stranded on the minority side is shown as stale, so only one node claims to lead
+  await expect(page.locator('#consensus .node[aria-label*=", leader, term"]')).toHaveCount(1);
   await page.getByRole("button", { name: "Heal the network" }).click();
   await expect(banner(page)).toContainText("5 of 5", { timeout: 30_000 });
 });
