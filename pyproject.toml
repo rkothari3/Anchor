@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "Fault-tolerant membership: SWIM failure detection + Raft leader election"
 requires-python = ">=3.11"
 dependencies = [
-    "grpcio>=1.66",
-    "protobuf>=5.27",
+    "grpcio>=1.84",  # must be >= the grpcio-tools that generated src/dssd/*pb
+    "protobuf>=7.35,<8",  # generated code pins the protobuf major
     "torch>=2.0",
     "numpy>=1.26",
     "aiohttp>=3.9",
@@ -20,7 +20,7 @@ dssd-experiment = "dssd.diloco.experiment:main"
 
 [project.optional-dependencies]
 dev = [
-    "grpcio-tools>=1.66",
+    "grpcio-tools>=1.84",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.6",
