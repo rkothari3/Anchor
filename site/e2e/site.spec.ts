@@ -103,6 +103,18 @@ test("sharded world loses no agent when the busiest server dies", async ({ page 
     await page.waitForTimeout(500);
   }
   await expect(world).toContainText("8/8");
+  // hand-offs briefly list an agent in two shards; it must still be drawn exactly once
+  expect(await page.locator("#world circle.agent").count()).toBeLessThanOrEqual(8);
+});
+
+test("agents are never drawn twice over time", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#world").scrollIntoViewIfNeeded();
+  await expect(page.locator("#world .banner")).toContainText("8/8", { timeout: 40_000 });
+  for (let i = 0; i < 12; i++) {
+    expect(await page.locator("#world circle.agent").count()).toBeLessThanOrEqual(8);
+    await page.waitForTimeout(2500);
+  }
 });
 
 test("training chart shows all three recorded runs", async ({ page }) => {

@@ -13,6 +13,15 @@ const OWNER = ["#5eead4", "#7aa7ff", "#c9a7ff"];
 const wideServer = (i: number): Pt => ({ x: 548, y: 82 + i * 128 });
 const narrowServer = (i: number): Pt => ({ x: 76 + i * 132, y: 462 });
 
+/** Mid hand-off an agent is briefly in two shards; draw it once, in the shard its position belongs to. */
+function distinctAgents(snap: WorldSnapshot) {
+  const { w, h, cols, rows } = snap.grid;
+  const home = (a: { x: number; y: number }) => `${Math.min(Math.max(Math.floor(a.y / (h / rows)), 0), rows - 1)}-${Math.min(Math.max(Math.floor(a.x / (w / cols)), 0), cols - 1)}`;
+  const byId = new Map<string, WorldSnapshot["agents"][number]>();
+  for (const a of snap.agents) if (!byId.has(a.id) || a.shard === home(a)) byId.set(a.id, a);
+  return [...byId.values()];
+}
+
 export function World() {
   const { world, status } = useEngine();
   const [ref, seen] = useSeen<HTMLElement>();
@@ -81,7 +90,7 @@ export function World() {
                     </g>
                   );
                 })}
-                {snap?.agents.map((a) => (
+                {snap && distinctAgents(snap).map((a) => (
                   <circle key={a.id} className="agent" r={5.5} cx={0} cy={0} fill={color(snap.shards.find((s) => s.id === a.shard)?.leader ?? null)} style={{ transform: `translate(${G.x + a.x * scale}px, ${G.y + a.y * scale}px)` }}>
                     <title>{a.id}</title>
                   </circle>
