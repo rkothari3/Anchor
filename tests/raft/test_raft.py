@@ -2,13 +2,11 @@ import asyncio
 
 import pytest
 
-from dssd.raft import (
+from dssd.raft import Config, Raft
+from dssd.spinepb import (
     AppendEntriesArgs,
     AppendEntriesReply,
-    ApplyMsg,
-    Config,
     LogEntry,
-    Raft,
     RequestVoteArgs,
     RequestVoteReply,
 )
@@ -77,11 +75,11 @@ class Cluster:
         self.network = FakeNetwork()
         self.ids = [f"n{i}" for i in range(n)]
         self.nodes: dict[str, Raft] = {}
-        self.apply_queues: dict[str, asyncio.Queue[ApplyMsg]] = {}
+        self.apply_queues: dict[str, asyncio.Queue[LogEntry]] = {}
 
         for node_id in self.ids:
             peers = [p for p in self.ids if p != node_id]
-            queue: asyncio.Queue[ApplyMsg] = asyncio.Queue()
+            queue: asyncio.Queue[LogEntry] = asyncio.Queue()
             raft = Raft(make_config(node_id, peers), FakeTransport(node_id, self.network), queue)
             self.network.register(node_id, raft)
             self.nodes[node_id] = raft
@@ -98,10 +96,11 @@ class Cluster:
         loop = asyncio.get_event_loop()
         deadline = loop.time() + timeout
         while loop.time() < deadline:
+            # A deposed leader can briefly coexist with a newer-term one,
+            # so return the leader of the highest term.
             leaders = [n for n in self.nodes.values() if n.state()[1]]
-            assert len(leaders) <= 1, f"found {len(leaders)} leaders at once"
-            if len(leaders) == 1:
-                return leaders[0]
+            if leaders:
+                return max(leaders, key=lambda n: n.state()[0])
             await asyncio.sleep(0.005)
         raise AssertionError(f"no leader elected within {timeout}s")
 
@@ -197,9 +196,13 @@ async def test_minority_partition_cannot_commit():
         if not is_leader:
             return  # leader stepped down; also proves the minority can't operate
 
+        # The leader's election no-op may already be on the queue; only
+        # "should-not-commit" must never show up.
         queue = cluster.apply_queues[leader_id]
         with pytest.raises(TimeoutError):
-            await asyncio.wait_for(queue.get(), timeout=0.3)
+            while True:
+                entry = await asyncio.wait_for(queue.get(), timeout=0.3)
+                assert entry.command != b"should-not-commit"
     finally:
         cluster.network.heal_all()
         await cluster.stop()
@@ -214,7 +217,7 @@ async def test_append_entries_truncates_conflicting_suffix():
             leader_id="old-leader",
             prev_log_index=0,
             prev_log_term=0,
-            entries=(LogEntry(term=1, index=1, command=b"stale"),),
+            entries=[LogEntry(term=1, index=1, command=b"stale")],
             leader_commit=0,
         )
     )
@@ -230,7 +233,7 @@ async def test_append_entries_truncates_conflicting_suffix():
             leader_id="new-leader",
             prev_log_index=0,
             prev_log_term=0,
-            entries=(LogEntry(term=2, index=1, command=b"fresh"),),
+            entries=[LogEntry(term=2, index=1, command=b"fresh")],
             leader_commit=0,
         )
     )
