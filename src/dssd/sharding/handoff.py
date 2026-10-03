@@ -38,6 +38,8 @@ class RegionOwnerService(regionpb.RegionOwnerServicer):
 
         a = request.agent
         async with sm.lock:
+            if not await sm.wait_caught_up():
+                return regionpb.HandOffResponse(accepted=False, reason="leader could not catch up its log")
             previous = dict(sm.agents)
             sm.agents[a.id] = AgentState(id=a.id, x=a.x, y=a.y, vx=a.vx, vy=a.vy)
 

@@ -90,6 +90,10 @@ class Raft:
         """Returns (current_term, is_leader)."""
         return self._current_term, self._role == Role.LEADER
 
+    def last_index(self) -> int:
+        """Index of the last entry in this node's log, applied or not."""
+        return len(self._log) - 1
+
     def leader_hint(self) -> tuple[str, int]:
         """Returns (leader_id, term) for the leader this instance last
         heard from. May be stale or empty during an election."""
