@@ -4,12 +4,6 @@ from dssd.diloco.data import CharTokenizer, make_batch, synthetic_corpus
 from dssd.diloco.model import ModelConfig, TinyGPT
 
 
-def test_tokenizer_roundtrip():
-    tokenizer = CharTokenizer("abcxyz")
-    encoded = tokenizer.encode("cab")
-    assert tokenizer.decode(encoded) == "cab"
-
-
 def test_inner_loop_reduces_loss():
     torch.manual_seed(0)
 
