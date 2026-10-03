@@ -12,9 +12,9 @@ export function App() {
       <a className="skip" href="#main">Skip to content</a>
       <nav className="nav" aria-label="Primary">
         <div className="wrap nav-in">
-          <a className="brand mono" href="#top" aria-label="DSSD, back to top">
+          <a className="brand mono" href="#top" aria-label="Anchor, back to top">
             <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 7 25 13 21.5 24H10.5L7 13Z" fill="none" stroke="#5eead4" strokeWidth="2" opacity=".7" /><circle cx="16" cy="7" r="3" fill="#5eead4" /><circle cx="25" cy="13" r="2.4" fill="#5eead4" /><circle cx="21.5" cy="24" r="2.4" fill="#5eead4" /><circle cx="10.5" cy="24" r="2.4" fill="#5eead4" /><circle cx="7" cy="13" r="2.4" fill="#5eead4" /></svg>
-            DSSD
+            Anchor
           </a>
           <div className="nav-links">
             <a href="#consensus">Consensus</a>
@@ -35,7 +35,7 @@ export function App() {
       </main>
       <footer className="footer">
         <div className="wrap">
-          <p>Built from scratch in Python. The playgrounds run the real source in your browser via Pyodide, with nothing sent to a server.</p>
+          <p>Anchor is built from scratch in Python. The playgrounds run the real source in your browser via Pyodide, with nothing sent to a server.</p>
           <p><a href={REPO} target="_blank" rel="noreferrer">GitHub</a> · <a href={`${REPO}#readme`} target="_blank" rel="noreferrer">README</a></p>
         </div>
       </footer>

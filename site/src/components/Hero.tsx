@@ -42,7 +42,7 @@ export function Hero() {
     <header className="hero">
       <div className="wrap hero-grid">
         <div>
-          <p className="eyebrow">Distributed systems · from scratch</p>
+          <p className="eyebrow">Anchor · distributed systems from scratch</p>
           <h1>Break a distributed system. Watch it heal.</h1>
           <p className="lede">
             Five computers must always agree who is in charge, even while some of them die. This page runs <strong>the real implementation</strong> live in your browser. Crash a node, cut the network, and see what survives.
