@@ -1,0 +1,8 @@
+node_modules/
+dist/
+public/pyodide/
+public/py/
+src/data/training.json
+test-results/
+playwright-report/
+screenshots/

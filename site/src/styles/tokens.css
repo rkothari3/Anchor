@@ -1,0 +1,25 @@
+:root {
+  --bg: #0a0a0b;
+  --surface: #111114;
+  --surface-2: #17171b;
+  --border: #25252b;
+  --border-strong: #34343c;
+  --text: #ededef;
+  --muted: #9a9aa5;
+  --faint: #6b6b76;
+
+  --accent: #5eead4; /* healthy / leader */
+  --accent-dim: rgba(94, 234, 212, 0.14);
+  --amber: #fbbf24; /* suspected */
+  --red: #f87171; /* dead */
+  --blue: #7aa7ff; /* candidate / election */
+
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --max: 1120px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
