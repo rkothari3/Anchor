@@ -1,6 +1,7 @@
 import asyncio
 
 from dssd.swim import Config, EventType, Member, Node, State
+from tests.support import eventually
 
 
 def make_config(id: str) -> Config:
@@ -25,18 +26,6 @@ async def new_cluster(n: int) -> list[Node]:
 
 async def stop_all(nodes: list[Node]) -> None:
     await asyncio.gather(*(n.stop() for n in nodes))
-
-
-async def eventually(cond, timeout: float = 2.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        result = cond()
-        if result:
-            return
-        if loop.time() >= deadline:
-            assert result, "condition not met within timeout"
-        await asyncio.sleep(0.01)
 
 
 def count_alive(members: list[Member]) -> int:

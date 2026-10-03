@@ -1,4 +1,5 @@
 import asyncio
+from functools import partial
 
 import grpc
 import torch
@@ -13,6 +14,9 @@ from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
 from dssd.swim import Config as SwimConfig
 from dssd.swim import Node as SwimNode
+from tests import support
+
+eventually = partial(support.eventually, timeout=15.0)
 
 
 class WorkerHarness:
@@ -110,17 +114,6 @@ async def start_cluster(n: int, inner_steps: int = 5, batch_size: int = 8) -> li
         m.train_task = asyncio.create_task(m.worker.run())
 
     return members
-
-
-async def eventually(cond, timeout: float = 15.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        if cond():
-            return
-        if loop.time() >= deadline:
-            assert cond(), "condition not met within timeout"
-        await asyncio.sleep(0.05)
 
 
 async def test_workers_converge_and_loss_trends_down():
