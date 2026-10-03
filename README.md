@@ -36,4 +36,4 @@ pip install -e ".[dev]" && pytest   # 52 tests
 cd site && npm ci && npm run dev    # the website
 ```
 
-Anchor lives in the `dssd` repo. Code is in `src/dssd/` (`swim.py`, `raft.py`, `diloco/`, `sharding/`). The original design notes are in [docs/design-report.md](docs/design-report.md).
+Anchor lives in the `dssd` repo. Code is in `src/dssd/` (`swim.py`, `raft.py`, `diloco/`, `sharding/`).
