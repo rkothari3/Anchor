@@ -45,7 +45,7 @@ export function Hero() {
           <p className="eyebrow">Distributed systems · from scratch</p>
           <h1>Break a distributed system. Watch it heal.</h1>
           <p className="lede">
-            Failure detection, consensus and fault-tolerant training, built from first principles. The code on this page is <strong>the real implementation</strong>, running live in your browser. Crash a node, split the network and see what survives.
+            Five computers must always agree who is in charge, even while some of them die. This page runs <strong>the real implementation</strong> live in your browser. Crash a node, cut the network, and see what survives.
           </p>
           <div className="cta">
             <a className="btn primary" href="#consensus">Break it</a>

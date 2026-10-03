@@ -426,7 +426,7 @@ h1 {
 }
 input[type="range"] {
   width: 100%;
-  height: 24px;
+  height: 32px;
   accent-color: var(--accent);
   background: transparent;
   cursor: pointer;
@@ -678,11 +678,6 @@ input[type="range"]:disabled {
   color: var(--muted);
   max-width: 70ch;
 }
-@media (max-width: 640px) {
-  .stat-row {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* cards */
 .cards {
@@ -807,5 +802,37 @@ input[type="range"]:disabled {
   }
   .feed-list {
     height: 200px;
+  }
+}
+
+.gloss {
+  margin-top: 14px;
+  max-width: 62ch;
+  padding: 12px 16px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-dim);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 14px;
+  color: var(--text);
+}
+.gloss b {
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .controls .btn {
+    min-height: 46px;
+  }
+  .stat-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .stat {
+    padding: 12px;
+  }
+  .stat span {
+    font-size: 11px;
+  }
+  .series b {
+    display: none;
   }
 }

@@ -21,7 +21,7 @@ function Node({ n, at, snap, valid }: { n: ConsensusNode; at: Pt; snap: Consensu
   const color = !n.up ? "var(--faint)" : stale ? "var(--amber)" : ROLE_COLOR[n.role];
   const toggle = () => (n.up ? engine.call("consensus", "kill", n.id) : engine.call("consensus", "revive", n.id));
   const label = `${n.id}, ${stale ? "stale leader" : roleLabel(n)}, term ${n.term}. ${n.up ? "Press to crash this node" : "Press to restart this node"}`;
-  const beliefColor = b === "dead" ? "var(--red)" : b === "suspect" ? "var(--amber)" : "var(--faint)";
+  const beliefColor = b === "alive" ? "var(--faint)" : n.up || b === "suspect" ? "var(--amber)" : "var(--red)"; // red is for nodes that really crashed
   return (
     <g transform={`translate(${at.x} ${at.y})`}>
       {n.role === "leader" && n.up && !stale && <circle className="halo" r={46} fill="none" stroke="var(--accent)" aria-hidden="true" pointerEvents="none" />}
@@ -46,10 +46,34 @@ function Node({ n, at, snap, valid }: { n: ConsensusNode; at: Pt; snap: Consensu
       </text>
       {b !== "alive" && (
         <text className="node-belief mono" textAnchor="middle" y={60} fill={beliefColor}>
-          {b === "dead" ? "declared dead" : "suspected"}
+          {b === "suspect" ? "suspected" : n.up ? "unreachable" : "declared dead"}
         </text>
       )}
     </g>
+    </g>
+  );
+}
+
+/** A line between the two groups: through the midpoints of the two ring edges where the side changes. */
+function SplitLine({ snap, pos }: { snap: ConsensusSnapshot; pos: (id: string) => Pt | undefined }) {
+  const ids = snap.nodes.map((n) => n.id);
+  const side = (id: string) => snap.net.side[id] ?? 0;
+  const mids = ids.flatMap((id, i) => {
+    const next = ids[(i + 1) % ids.length];
+    const a = pos(id);
+    const b = pos(next);
+    return side(id) !== side(next) && a && b ? [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }] : [];
+  });
+  if (mids.length < 2) return null;
+  const [p, q] = mids;
+  const ext = (from: Pt, to: Pt) => ({ x: to.x + (to.x - from.x) * 0.45, y: to.y + (to.y - from.y) * 0.45 });
+  const a = ext(q, p);
+  const b = ext(p, q);
+  const top = a.y < b.y ? a : b;
+  return (
+    <g aria-hidden="true">
+      <line className="split" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+      <text className="split-label mono" x={top.x} y={top.y - 8} textAnchor={top.x < C.x ? "start" : "end"}>network split</text>
     </g>
   );
 }
@@ -131,6 +155,9 @@ export function Consensus() {
         <p className="lede">
           This is <strong>the real <code>swim.py</code> and <code>raft.py</code></strong>, running in your browser. Crash a node, cut the network in two, drop packets. The cluster has to elect a leader and keep every committed write.
         </p>
+        <p className="gloss">
+          New here? The <b>leader</b> is the node in charge. A write only counts once a <b>majority</b> (3 of 5) has it, so any 2 nodes can fail without losing data. Try <b>Kill the leader</b> first.
+        </p>
 
         <div className="panel playground">
           <div className="panel-head">
@@ -141,12 +168,7 @@ export function Consensus() {
           <div className="play-grid">
             <div className="stage">
               <svg viewBox="80 0 400 430" role="group" aria-label="Five-node cluster" className={`ring ${cut ? "cut" : ""}`}>
-                {snap && cut && (
-                  <g aria-hidden="true">
-                    <line className="split" x1={C.x - 120} y1={32} x2={C.x + 20} y2={H - 14} />
-                    <text className="split-label mono" x={C.x - 190} y={22}>network split</text>
-                  </g>
-                )}
+                {snap && cut && <SplitLine snap={snap} pos={pos} />}
                 {snap &&
                   snap.nodes.flatMap((a, i) =>
                     snap.nodes.slice(i + 1).map((b) => (
@@ -171,8 +193,8 @@ export function Consensus() {
                 <button className="btn danger" disabled={!live || !snap.leader} onClick={() => call("kill_leader")}>
                   Kill the leader
                 </button>
-                <button className="btn" disabled={!live} onClick={() => (setWrites(writes + 1), call("write", `x=${writes + 1}`))}>
-                  Write a value
+                <button className="btn" disabled={!live || q?.kind !== "ok"} title={q && q.kind !== "ok" ? "Needs a leader that can reach a majority" : undefined} onClick={() => (setWrites(writes + 1), call("write", `x=${writes + 1}`))}>
+                  Write data
                 </button>
                 <button className="btn" disabled={!live} aria-pressed={cut} onClick={() => call("partition", cut ? null : SPLIT)}>
                   {cut ? "Heal the network" : "Split network 2 | 3"}

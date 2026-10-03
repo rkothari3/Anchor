@@ -50,10 +50,30 @@ test("a 2|3 split leaves only the majority able to commit", async ({ page }) => 
   await expect(banner(page)).toContainText("5 of 5", { timeout: 30_000 });
 });
 
+test("the split line separates exactly the two groups", async ({ page }) => {
+  await page.goto("/");
+  await expect(banner(page)).toContainText("Quorum");
+  await page.getByRole("button", { name: /Split network/ }).click();
+  await expect(page.locator("#consensus .split")).toHaveCount(1);
+  const side = await page.evaluate(() => {
+    const line = document.querySelector("#consensus .split")!;
+    const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => +line.getAttribute(a)!);
+    const out: Record<string, number> = {};
+    document.querySelectorAll("#consensus .node").forEach((n) => {
+      const [x, y] = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(n.parentElement!.getAttribute("transform")!)!.slice(1).map(Number);
+      out[n.getAttribute("aria-label")!.slice(0, 2)] = Math.sign((x2 - x1) * (y - y1) - (y2 - y1) * (x - x1));
+    });
+    return out;
+  });
+  expect([side.n1, side.n2].every((v) => v === side.n1)).toBe(true);
+  expect([side.n3, side.n4, side.n5].every((v) => v === side.n3)).toBe(true);
+  expect(side.n1).not.toBe(side.n3);
+});
+
 test("writes reach every node's log and commit", async ({ page }) => {
   await page.goto("/");
   await expect(banner(page)).toContainText("Quorum");
-  await page.getByRole("button", { name: "Write a value" }).click();
+  await page.getByRole("button", { name: "Write data" }).click();
   await expect(page.locator('#consensus .chip.committed:has-text("x=1")')).toHaveCount(5, { timeout: 20_000 });
 });
 

@@ -43,7 +43,7 @@ export function World() {
         <p className="eyebrow">02 · Sharded world</p>
         <h2 id="world-h">Kill a server. Lose nothing.</h2>
         <p className="lede">
-          A 2×2 world is split into four shards. Each shard is its own Raft group, and its leader owns that region. Agents wander across borders and get <strong>handed off</strong> between shards. Crash a region server and watch ownership move while the counter below stays honest.
+          A 2×2 world is split into four shards. Each shard is its own Raft group, and its leader owns that region. Agents wander across borders and get <strong>handed off</strong> between shards. Crash a region server and watch ownership move while the counter above stays honest.
         </p>
 
         <div className="panel playground">
@@ -52,7 +52,7 @@ export function World() {
             <p className={`banner ${intact && snap?.nodes.some((n) => n.up) ? "ok" : "stalled"}`} role="status">
               <span className="banner-dot" aria-hidden="true" />
               {snap && !snap.nodes.some((n) => n.up) ? (
-                "All servers are down. Nothing is lost, and nothing runs until one restarts."
+                "All servers are down. Their state is kept, but nothing runs until one restarts."
               ) : stats ? (
                 <>
                   <b className="mono">{stats.total - stats.lost}/{stats.total}</b>&nbsp;agents · lost <b className="mono">{stats.lost}</b> · in transit <b className="mono">{stats.duplicated}</b>
@@ -76,7 +76,7 @@ export function World() {
                         shard {s.id}
                       </text>
                       <text className="shard-sub mono" x={G.x + col * cell + 16} y={G.y + row * cell + 46} fill="var(--muted)">
-                        {s.leader ? `led by ${s.leader} · term ${s.term}` : "electing a leader…"}
+                        {s.leader ? `led by ${s.leader} · term ${s.term}` : snap?.nodes.some((n) => n.up) ? "electing a leader…" : "no leader · no server up"}
                       </text>
                     </g>
                   );
@@ -112,7 +112,7 @@ export function World() {
               </svg>
               {!live && <Boot />}
               <ul className="legend" aria-label="Legend">
-                <li><i style={{ background: "var(--text)" }} /> agent, coloured by owning server</li>
+                <li><i style={{ background: "var(--accent)" }} /> agent (colour = owning server)</li>
                 <li><i style={{ background: "var(--amber)" }} /> hand-off between servers</li>
               </ul>
             </div>

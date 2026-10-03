@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import data from "../data/training.json";
+import { useMedia } from "../lib/useMedia";
 
 type Point = [number, number | null];
 interface Run {
@@ -10,15 +11,19 @@ const runs = data.runs as Run[];
 const COLOR: Record<number, string> = { 0: "var(--accent)", 5: "var(--blue)", 20: "var(--red)" };
 
 const DURATION = 240; // every run is a 240 s experiment; kills are evenly spaced across it (experiment.py:kill_schedule)
-const W = 760;
-const H = 360;
-const M = { l: 48, r: 16, t: 30, b: 46 };
 const YMAX = 1.8;
-const x = (t: number) => M.l + (t / DURATION) * (W - M.l - M.r);
-const y = (v: number) => M.t + (1 - v / YMAX) * (H - M.t - M.b);
+
+/** Wide on desktop; a squarer chart on phones so lines and labels stay legible. */
+function scales(narrow: boolean) {
+  const W = narrow ? 420 : 760;
+  const H = narrow ? 320 : 360;
+  const M = { l: narrow ? 40 : 48, r: 12, t: 30, b: 46 };
+  return { W, H, M, x: (t: number) => M.l + (t / DURATION) * (W - M.l - M.r), y: (v: number) => M.t + (1 - v / YMAX) * (H - M.t - M.b) };
+}
+type Scale = (n: number) => number;
 
 /** A line that breaks wherever the worker was down (loss was null). */
-function path(points: Point[], upTo: number) {
+function path(points: Point[], upTo: number, x: Scale, y: Scale) {
   let d = "";
   let pen = false;
   for (const [t, v] of points) {
@@ -45,6 +50,8 @@ const lossAt = (r: Run, t: number) => {
 const killTimes = (k: number) => Array.from({ length: k }, (_, i) => (DURATION / (k + 1)) * (i + 1));
 
 export function Training() {
+  const narrow = useMedia("(max-width: 640px)");
+  const { W, H, M, x, y } = scales(narrow);
   const [t, setT] = useState(DURATION);
   const [playing, setPlaying] = useState(false);
   const raf = useRef(0);
@@ -77,9 +84,9 @@ export function Training() {
     <section id="training" aria-labelledby="training-h">
       <div className="wrap">
         <p className="eyebrow">03 · Training under chaos</p>
-        <h2 id="training-h">Kill the workers. Training keeps going.</h2>
+        <h2 id="training-h">Kill the workers. Training survives.</h2>
         <p className="lede">
-          Fault-tolerant <strong>DiLoCo</strong> on a local Kubernetes cluster: 3 workers train a small model, and random pods are deleted mid-run. These are the <strong>recorded runs</strong> (PyTorch can't run in a browser), straight from <code>results/*.csv</code>.
+          Fault-tolerant <strong>DiLoCo</strong> on a local Kubernetes cluster: 3 workers train a small model, and pods are deleted mid-run, at evenly spaced times and random victims. These are the <strong>recorded runs</strong> (PyTorch can't run in a browser), straight from <code>results/*.csv</code>.
         </p>
 
         <div className="panel chart-panel">
@@ -120,7 +127,7 @@ export function Training() {
               )),
             )}
             {[...runs].reverse().map((r) => (
-              <path key={r.kills} d={path(r.points, t)} fill="none" stroke={COLOR[r.kills]} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
+              <path key={r.kills} d={path(r.points, t, x, y)} fill="none" stroke={COLOR[r.kills]} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
             ))}
             <line className="cursor" x1={x(t)} x2={x(t)} y1={M.t} y2={H - M.b} />
             {runs.map((r) => {
