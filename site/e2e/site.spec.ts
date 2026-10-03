@@ -127,6 +127,13 @@ test("training chart shows all three recorded runs", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
 });
 
+test("states the limits plainly", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#limits")).toContainText("not a replacement for etcd, Consul or Kafka");
+  await expect(page.locator("#limits .ticks.no li")).toHaveCount(5);
+  await expect(page.locator("#training .lede")).toContainText("5 workers");
+});
+
 test("works with reduced motion", async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const page = await ctx.newPage();

@@ -1,8 +1,29 @@
+# Anchor
+
+Spot and preemptible GPUs get killed mid-run. The usual fix is to restart from the last checkpoint and lose the work since. Anchor is the layer underneath a better answer: it detects a dead worker (SWIM), agrees on who leads and who is in the group (Raft), and keeps the survivors training (a DiLoCo round barrier that shrinks instead of hanging). The same machinery keeps a Raft-sharded spatial simulation lossless when a region server dies.
+
+Everything is written from scratch in Python to understand it by building and breaking it. **Try it:** [rkothari3.github.io/DSSD](https://rkothari3.github.io/DSSD/) runs the real code in your browser.
+
+**Measured:** 5 workers training a tiny model on a local `kind` cluster, with 0, 5 and 20 pods deleted over 240 s. Training never restarted. More kills do slow convergence a lot (final loss 0.15 with no kills, 0.37 with 5, 1.02 with 20), and that cost is the honest result.
+
+## Limits
+
+Read these before using it for anything real.
+
+- **State is in memory.** The Raft log is not written to disk and there is no snapshotting or log compaction. If every node restarts, state is lost. Membership is fixed at startup.
+- **Python speed.** One asyncio loop per process. This demonstrates correctness, not throughput. Do not compare it with etcd, Consul or Kafka.
+- **No security.** gRPC runs over insecure channels, with no TLS or authentication.
+- **Small experiment.** The training model is a tiny nanoGPT-style transformer (32-dim, 2 layers) on CPU, with 5 workers on one machine and one run per kill count, so there are no error bars. Kills are pod deletions at evenly spaced times, not real spot preemptions, and there is no comparison against checkpoint-and-restart yet.
+- **Simple sharded world.** Each shard's log entry is a full snapshot of its agents, so logs grow every tick, and agent movement is deliberately basic.
+- **The browser demo simulates the network.** The same Raft and SWIM code runs, but messages travel over an in-memory network. The training chart is recorded data, not live.
+
+**Next, if this became a tool:** a write-ahead log on disk, membership changes, and a measured comparison against checkpoint-and-restart on real spot GPUs.
+
 # Distributed Systems Capstone Research Report: Fault-Tolerant Training + "Live City" (2026)
 
 ## Implementation Status
 
-This report was the design document; the project, **Anchor**, was then built in Python on top of it (the repo is named `dssd`).
+The text below this section is the original design report. Anchor was then built in Python on top of it (the repo is named `dssd`).
 
 - **Implemented:** Stage 1 (SWIM failure detection + Raft leader election), Stage 2
   (DiLoCo training on a local `kind` cluster, surviving pod kills, with the

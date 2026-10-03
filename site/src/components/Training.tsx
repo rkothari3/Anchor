@@ -86,7 +86,7 @@ export function Training() {
         <p className="eyebrow">03 · Training under chaos</p>
         <h2 id="training-h">Kill the workers. Training survives.</h2>
         <p className="lede">
-          Fault-tolerant <strong>DiLoCo</strong> on a local Kubernetes cluster: 3 workers train a small model, and pods are deleted mid-run, at evenly spaced times and random victims. These are the <strong>recorded runs</strong> (PyTorch can't run in a browser), straight from <code>results/*.csv</code>.
+          Spot and preemptible GPUs get killed mid-run, and the usual fix is to restart from a checkpoint. Anchor <strong>detects the dead worker and keeps training with the survivors</strong>. Below are the <strong>recorded runs</strong>: 5 workers training a tiny model on a local Kubernetes cluster while pods are deleted at evenly spaced times and random victims. They're recorded because PyTorch can't run in a browser (data: <code>results/*.csv</code>).
         </p>
 
         <div className="panel chart-panel">
@@ -135,7 +135,7 @@ export function Training() {
               return v == null ? null : <circle key={r.kills} cx={x(t)} cy={y(v)} r={4} fill={COLOR[r.kills]} stroke="var(--bg)" strokeWidth={2} />;
             })}
           </svg>
-          <p className="chart-note">Ticks under the axis mark each pod kill (evenly spaced across the 240 s run). Gaps are the moments a killed worker was restarting.</p>
+          <p className="chart-note">Ticks under the axis mark each pod kill (evenly spaced across the 240 s run). Gaps are the moments a killed worker was restarting. One run per setting, so read the shapes, not the decimals.</p>
         </div>
 
         <div className="stat-row">

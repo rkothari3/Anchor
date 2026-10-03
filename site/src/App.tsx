@@ -1,6 +1,7 @@
 import { Consensus } from "./components/Consensus";
 import { Hero } from "./components/Hero";
 import { Hood } from "./components/Hood";
+import { Limits } from "./components/Limits";
 import { Training } from "./components/Training";
 import { World } from "./components/World";
 
@@ -21,6 +22,7 @@ export function App() {
             <a href="#world">World</a>
             <a href="#training">Training</a>
             <a href="#hood">Under the hood</a>
+            <a href="#limits">Limits</a>
           </div>
           <a className="btn" href={REPO} target="_blank" rel="noreferrer">GitHub</a>
         </div>
@@ -32,6 +34,7 @@ export function App() {
         <World />
         <Training />
         <Hood />
+        <Limits />
       </main>
       <footer className="footer">
         <div className="wrap">

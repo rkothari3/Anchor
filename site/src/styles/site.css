@@ -836,3 +836,49 @@ input[type="range"]:disabled {
     display: none;
   }
 }
+
+.cards.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 860px) {
+  .cards.two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ticks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.ticks li {
+  position: relative;
+  padding-left: 22px;
+}
+.ticks li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font: 600 14px/1.6 var(--font-mono);
+}
+.ticks.yes li::before {
+  content: "+";
+  color: var(--accent);
+}
+.ticks.no li::before {
+  content: "\2212";
+  color: var(--amber);
+}
+.next {
+  margin-top: 20px;
+  max-width: 70ch;
+  font-size: 14px;
+  color: var(--muted);
+}
+.next b {
+  color: var(--text);
+  font-weight: 600;
+}
