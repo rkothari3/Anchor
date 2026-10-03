@@ -52,6 +52,8 @@ class RegionServer:
         if sm is None or not sm.raft.state()[1]:
             return False
         async with sm.lock:
+            if not await sm.wait_caught_up():
+                return False
             sm.agents[agent.id] = agent
             if await sm.propose_and_confirm():
                 return True
@@ -83,6 +85,8 @@ class RegionServer:
             if not sm.raft.state()[1]:
                 continue
             async with sm.lock:
+                if not sm.caught_up():
+                    continue
                 for agent in list(sm.agents.values()):
                     agent.step(self.dt, self.grid)
                     new_shard_id = agent.shard_id(self.grid)

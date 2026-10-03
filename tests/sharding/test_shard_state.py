@@ -2,10 +2,11 @@ import asyncio
 
 import grpc
 
-from dssd import regionpb
+from dssd import raft, regionpb
+from dssd.sharding.region_server import RegionServer
 from dssd.sharding.shard_raft import ChannelPool, ShardRaftManager
 from dssd.sharding.shard_state import ShardStateMachine
-from dssd.sharding.world import AgentState
+from dssd.sharding.world import AgentState, GridConfig
 
 
 async def eventually(cond, timeout: float = 3.0) -> None:
@@ -142,3 +143,39 @@ async def test_new_leader_retains_state_after_original_leader_dies():
             await n.manager.stop()
             await n.server.stop(None)
             await n.channels.close()
+
+
+class _AgreeablePeers:
+    async def request_vote(self, peer_id: str, args: raft.RequestVoteArgs) -> raft.RequestVoteReply:
+        return raft.RequestVoteReply(term=args.term, vote_granted=True)
+
+    async def append_entries(self, peer_id: str, args: raft.AppendEntriesArgs) -> raft.AppendEntriesReply:
+        return raft.AppendEntriesReply(term=args.term, success=True)
+
+
+async def test_leader_refuses_to_snapshot_until_its_log_is_applied():
+    # A just-elected leader has committed entries it hasn't applied yet,
+    # so its in-memory agents are stale. Snapshotting from that state
+    # would erase the unapplied entries - an agent lost on failover.
+    queue: asyncio.Queue[raft.ApplyMsg] = asyncio.Queue()
+    cfg = raft.Config(
+        id="n", peers=["p1", "p2"], election_timeout_min=0.02, election_timeout_max=0.04, heartbeat_interval=0.01
+    )
+    node = raft.Raft(cfg, _AgreeablePeers(), queue)
+    sm = ShardStateMachine(node, queue)
+    region = RegionServer("n", GridConfig(width=10.0, height=10.0, cols=1, rows=1), {"0-0": sm}, {})
+    await node.start()  # sm.start() deliberately not called yet: nothing gets applied
+    try:
+        await eventually(lambda: node.state()[1])
+        await eventually(lambda: not sm.caught_up())  # the election no-op is committed but unapplied
+
+        before = node.last_index()
+        assert not await region.spawn_agent(AgentState(id="a", x=1.0, y=1.0, vx=0.0, vy=0.0))
+        assert node.last_index() == before, "proposed a snapshot from stale state"
+
+        await sm.start()
+        await eventually(sm.caught_up)
+        assert await region.spawn_agent(AgentState(id="a", x=1.0, y=1.0, vx=0.0, vy=0.0))
+    finally:
+        await sm.stop()
+        await node.stop()

@@ -69,6 +69,16 @@ class ShardStateMachine:
         except asyncio.CancelledError:
             pass
 
+    def caught_up(self) -> bool:
+        """True once every entry in this replica's log has been applied.
+        A freshly elected leader's in-memory agents lag behind its log
+        until then, and a snapshot proposed from that stale state would
+        erase the entries still waiting to apply (an agent lost on
+        failover). Callers that mutate-then-snapshot must check this
+        (or ``wait_caught_up``) while holding ``lock``.
+        """
+        return self._last_applied_index >= self.raft.last_index()
+
     def propose_tick(self) -> bool:
         """Proposes the current in-memory agent state as the next log
         entry. Only takes effect if this node is still the shard's
@@ -87,13 +97,22 @@ class ShardStateMachine:
         index, term, is_leader = self.raft.propose(encode_tick(self.agents))
         if not is_leader:
             return False
+        return await self._wait_applied(index, term, timeout)
 
+    async def wait_caught_up(self, timeout: float = 1.0) -> bool:
+        """Waits for this replica to apply its whole log, for one-shot
+        callers (spawn, hand-off) that can't just skip and retry the way
+        the tick loop does. False if leadership is lost or time runs out."""
+        term, is_leader = self.raft.state()
+        return is_leader and await self._wait_applied(self.raft.last_index(), term, timeout)
+
+    async def _wait_applied(self, index: int, term: int, timeout: float) -> bool:
         loop = asyncio.get_event_loop()
         deadline = loop.time() + timeout
         while loop.time() < deadline:
             current_term, current_is_leader = self.raft.state()
             if current_term != term or not current_is_leader:
-                return False  # superseded before committing
+                return False  # superseded before applying
             if self._last_applied_index >= index:
                 return True
             await asyncio.sleep(0.01)
