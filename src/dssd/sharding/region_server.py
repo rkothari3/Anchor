@@ -26,11 +26,13 @@ class RegionServer:
         shards: dict[str, ShardStateMachine],
         peer_addrs: dict[str, str],  # node id -> grpc addr, for hand-offs
         tick_interval: float = 0.2,
+        handoff=request_handoff,
     ) -> None:
         self.grid = grid
         self.shards = shards
         self.peer_addrs = peer_addrs
         self.tick_interval = tick_interval
+        self._handoff_fn = handoff  # swap for an in-memory one to run without gRPC
 
     async def spawn_agent(self, agent: AgentState) -> bool:
         """Places an agent in its shard, if we lead that shard. True once durable."""
@@ -82,6 +84,6 @@ class RegionServer:
         if leader_id not in self.peer_addrs:
             return False, "destination leader unknown"
         try:
-            return await request_handoff(self.peer_addrs[leader_id], dest_shard_id, term, agent)
+            return await self._handoff_fn(self.peer_addrs[leader_id], dest_shard_id, term, agent)
         except grpc.aio.AioRpcError as err:
             return False, str(err.code())
