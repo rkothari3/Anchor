@@ -2,12 +2,13 @@ syntax = "proto3";
 
 package dssd.trainer.v1;
 
-// Trainer is hosted by the current group coordinator (the membership
-// spine's Raft leader) and implements the DiLoCo outer-step barrier:
-// workers submit their local pseudo-gradient and block until the round
-// closes, then all receive the new global model state together.
+// Every worker serves Trainer. Sync is only answered by the current Raft
+// leader: workers submit their pseudo-gradient and block until the round
+// closes, then all receive the new global model together. Status lets
+// the experiment script read each worker's progress.
 service Trainer {
   rpc Sync(SyncRequest) returns (SyncResponse);
+  rpc Status(StatusRequest) returns (StatusResponse);
 }
 
 message Tensor {
@@ -18,17 +19,20 @@ message Tensor {
 
 message SyncRequest {
   string worker_id = 1;
-  uint64 round = 2;
-  repeated Tensor pseudo_gradient = 3;
-  // The Raft term the worker believes is authoritative. Fences off
-  // submissions aimed at a since-replaced leader: a fresh leader always
-  // starts its own barrier at round 0, so round alone can't tell a
-  // stale submission from a legitimate new one after a leader change,
-  // but the term can.
-  uint64 term = 4;
+  repeated Tensor pseudo_gradient = 2;
+  // The Raft term the worker thinks is current. The leader rejects other
+  // terms, so a worker can't feed a since-replaced leader.
+  uint64 term = 3;
 }
 
 message SyncResponse {
   uint64 round = 1;
   repeated Tensor global_state = 2;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  uint64 round = 1;
+  optional float loss = 2;  // unset until the first inner loop finishes
 }

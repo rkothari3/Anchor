@@ -26,10 +26,10 @@ if _version_not_supported:
 
 
 class TrainerStub:
-    """Trainer is hosted by the current group coordinator (the membership
-    spine's Raft leader) and implements the DiLoCo outer-step barrier:
-    workers submit their local pseudo-gradient and block until the round
-    closes, then all receive the new global model state together.
+    """Every worker serves Trainer. Sync is only answered by the current Raft
+    leader: workers submit their pseudo-gradient and block until the round
+    closes, then all receive the new global model together. Status lets
+    the experiment script read each worker's progress.
     """
 
     def __init__(self, channel):
@@ -43,16 +43,27 @@ class TrainerStub:
                 request_serializer=trainer__pb2.SyncRequest.SerializeToString,
                 response_deserializer=trainer__pb2.SyncResponse.FromString,
                 _registered_method=True)
+        self.Status = channel.unary_unary(
+                '/dssd.trainer.v1.Trainer/Status',
+                request_serializer=trainer__pb2.StatusRequest.SerializeToString,
+                response_deserializer=trainer__pb2.StatusResponse.FromString,
+                _registered_method=True)
 
 
 class TrainerServicer:
-    """Trainer is hosted by the current group coordinator (the membership
-    spine's Raft leader) and implements the DiLoCo outer-step barrier:
-    workers submit their local pseudo-gradient and block until the round
-    closes, then all receive the new global model state together.
+    """Every worker serves Trainer. Sync is only answered by the current Raft
+    leader: workers submit their pseudo-gradient and block until the round
+    closes, then all receive the new global model together. Status lets
+    the experiment script read each worker's progress.
     """
 
     def Sync(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Status(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -66,6 +77,11 @@ def add_TrainerServicer_to_server(servicer, server):
                     request_deserializer=trainer__pb2.SyncRequest.FromString,
                     response_serializer=trainer__pb2.SyncResponse.SerializeToString,
             ),
+            'Status': grpc.unary_unary_rpc_method_handler(
+                    servicer.Status,
+                    request_deserializer=trainer__pb2.StatusRequest.FromString,
+                    response_serializer=trainer__pb2.StatusResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'dssd.trainer.v1.Trainer', rpc_method_handlers)
@@ -75,10 +91,10 @@ def add_TrainerServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Trainer:
-    """Trainer is hosted by the current group coordinator (the membership
-    spine's Raft leader) and implements the DiLoCo outer-step barrier:
-    workers submit their local pseudo-gradient and block until the round
-    closes, then all receive the new global model state together.
+    """Every worker serves Trainer. Sync is only answered by the current Raft
+    leader: workers submit their pseudo-gradient and block until the round
+    closes, then all receive the new global model together. Status lets
+    the experiment script read each worker's progress.
     """
 
     @staticmethod
@@ -98,6 +114,33 @@ class Trainer:
             '/dssd.trainer.v1.Trainer/Sync',
             trainer__pb2.SyncRequest.SerializeToString,
             trainer__pb2.SyncResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/dssd.trainer.v1.Trainer/Status',
+            trainer__pb2.StatusRequest.SerializeToString,
+            trainer__pb2.StatusResponse.FromString,
             options,
             channel_credentials,
             insecure,

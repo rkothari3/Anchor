@@ -1,17 +1,11 @@
-"""The leader-side DiLoCo outer-step barrier, exposed over gRPC.
+"""The leader-side DiLoCo outer-step barrier.
 
 Workers call Sync with their local pseudo-gradient and block until the
-round closes: either every currently-alive member (per the membership
-spine's quorum) has submitted, or round_timeout elapses with whatever
-partial set has submitted. The timeout path is what lets training
-continue without a restart when a worker dies mid-round.
-
-This class deliberately doesn't fence stale submissions across leader
-changes - a fresh leader always starts its own round counter at 0, so
-"round" alone can't distinguish a stale submission from a legitimate new
-one. That fencing belongs one layer up, keyed on the Raft term (see
-worker.LeaderGatedTrainerService), since a new instance of this class is
-constructed per term anyway.
+round closes: either every alive member (per SWIM) has submitted, or
+round_timeout elapses with whatever partial set arrived. The timeout is
+what lets training continue when a worker dies mid-round. Leader/term
+fencing lives one layer up, in Worker.Sync, which builds a fresh
+TrainerService per Raft term.
 """
 
 from __future__ import annotations

@@ -17,16 +17,14 @@ class Tensor(_message.Message):
     def __init__(self, key: _Optional[str] = ..., shape: _Optional[_Iterable[int]] = ..., data: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class SyncRequest(_message.Message):
-    __slots__ = ("worker_id", "round", "pseudo_gradient", "term")
+    __slots__ = ("worker_id", "pseudo_gradient", "term")
     WORKER_ID_FIELD_NUMBER: _ClassVar[int]
-    ROUND_FIELD_NUMBER: _ClassVar[int]
     PSEUDO_GRADIENT_FIELD_NUMBER: _ClassVar[int]
     TERM_FIELD_NUMBER: _ClassVar[int]
     worker_id: str
-    round: int
     pseudo_gradient: _containers.RepeatedCompositeFieldContainer[Tensor]
     term: int
-    def __init__(self, worker_id: _Optional[str] = ..., round: _Optional[int] = ..., pseudo_gradient: _Optional[_Iterable[_Union[Tensor, _Mapping]]] = ..., term: _Optional[int] = ...) -> None: ...
+    def __init__(self, worker_id: _Optional[str] = ..., pseudo_gradient: _Optional[_Iterable[_Union[Tensor, _Mapping]]] = ..., term: _Optional[int] = ...) -> None: ...
 
 class SyncResponse(_message.Message):
     __slots__ = ("round", "global_state")
@@ -35,3 +33,15 @@ class SyncResponse(_message.Message):
     round: int
     global_state: _containers.RepeatedCompositeFieldContainer[Tensor]
     def __init__(self, round: _Optional[int] = ..., global_state: _Optional[_Iterable[_Union[Tensor, _Mapping]]] = ...) -> None: ...
+
+class StatusRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class StatusResponse(_message.Message):
+    __slots__ = ("round", "loss")
+    ROUND_FIELD_NUMBER: _ClassVar[int]
+    LOSS_FIELD_NUMBER: _ClassVar[int]
+    round: int
+    loss: float
+    def __init__(self, round: _Optional[int] = ..., loss: _Optional[float] = ...) -> None: ...
