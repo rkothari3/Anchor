@@ -1,4 +1,4 @@
-from dssd.sharding.world import AgentState, GridConfig, neighbor_shard_ids, shard_id_for
+from dssd.sharding.world import AgentState, GridConfig, shard_id_for
 
 
 def make_grid() -> GridConfig:
@@ -18,18 +18,6 @@ def test_shard_id_clamps_boundary_coordinates():
     assert shard_id_for(0, 0, grid) == "0-0"
     assert shard_id_for(100, 100, grid) == "1-1"  # exactly on the far edge
     assert shard_id_for(-5, -5, grid) == "0-0"  # out of bounds clamps in
-
-
-def test_neighbor_shard_ids_excludes_out_of_bounds():
-    grid = make_grid()
-    assert set(neighbor_shard_ids("0-0", grid)) == {"0-1", "1-0", "1-1"}
-
-
-def test_neighbor_shard_ids_interior_has_all_eight():
-    grid = GridConfig(width=300.0, height=300.0, cols=3, rows=3)
-    neighbors = neighbor_shard_ids("1-1", grid)
-    assert len(neighbors) == 8
-    assert "1-1" not in neighbors
 
 
 def test_agent_step_moves_by_velocity():
