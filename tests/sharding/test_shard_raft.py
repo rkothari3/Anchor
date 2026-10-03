@@ -1,20 +1,9 @@
-import asyncio
 
 import grpc
 
 from dssd import regionpb
 from dssd.sharding.shard_raft import ChannelPool, ShardRaftManager
-
-
-async def eventually(cond, timeout: float = 3.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        if cond():
-            return
-        if loop.time() >= deadline:
-            assert cond(), "condition not met within timeout"
-        await asyncio.sleep(0.01)
+from tests.support import eventually
 
 
 class NodeHarness:

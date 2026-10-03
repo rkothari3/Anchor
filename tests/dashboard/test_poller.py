@@ -1,21 +1,11 @@
 import asyncio
+from functools import partial
 
 from dssd.dashboard.poller import Poller
 from tests.diloco.test_worker import start_cluster
+from tests import support
 
-
-async def eventually(cond, timeout: float = 15.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        result = cond()
-        if asyncio.iscoroutine(result):
-            result = await result
-        if result:
-            return
-        if loop.time() >= deadline:
-            assert result, "condition not met within timeout"
-        await asyncio.sleep(0.05)
+eventually = partial(support.eventually, timeout=15.0)
 
 
 async def test_snapshot_reports_all_reachable_members_alive():

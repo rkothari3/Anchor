@@ -7,6 +7,7 @@ workers that are mid-inner-loop on their own local batches.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import time
 from collections.abc import Awaitable, Callable
@@ -35,15 +36,11 @@ class MetricsRecorder:
         poll_fn: PollFn,
         interval: float,
         now: Callable[[], float] = time.monotonic,
-        sleep: Callable[[float], Awaitable[None]] | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._poll_fn = poll_fn
         self._interval = interval
         self._now = now
-        if sleep is None:
-            import asyncio
-
-            sleep = asyncio.sleep
         self._sleep = sleep
         self.rows: list[Row] = []
 

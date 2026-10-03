@@ -8,6 +8,7 @@ from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
 from dssd.swim import Config as SwimConfig
 from dssd.swim import Node
+from tests.support import eventually
 
 
 class ClusterMember:
@@ -87,18 +88,6 @@ async def start_cluster(n: int) -> list[ClusterMember]:
 
 async def stop_cluster(members: list[ClusterMember]) -> None:
     await asyncio.gather(*(m.stop() for m in members))
-
-
-async def eventually(cond, timeout: float = 3.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        result = await cond()
-        if result:
-            return
-        if loop.time() >= deadline:
-            assert result, "condition not met within timeout"
-        await asyncio.sleep(0.01)
 
 
 async def test_members_converge_over_grpc():

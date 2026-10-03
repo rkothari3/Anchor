@@ -63,9 +63,6 @@ class RegionServer:
     def stop(self) -> None:
         self._stopped = True
 
-    def agent_count(self) -> int:
-        return sum(len(sm.agents) for sm in self.state_machines.values())
-
     async def run(self) -> None:
         while not self._stopped:
             await asyncio.sleep(self.tick_interval)

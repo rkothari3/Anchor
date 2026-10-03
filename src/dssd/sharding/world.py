@@ -35,20 +35,6 @@ def shard_id_for(x: float, y: float, grid: GridConfig) -> str:
     return f"{row}-{col}"
 
 
-def neighbor_shard_ids(shard_id: str, grid: GridConfig) -> list[str]:
-    row_s, col_s = shard_id.split("-")
-    row, col = int(row_s), int(col_s)
-    neighbors = []
-    for dr in (-1, 0, 1):
-        for dc in (-1, 0, 1):
-            if dr == 0 and dc == 0:
-                continue
-            r, c = row + dr, col + dc
-            if 0 <= r < grid.rows and 0 <= c < grid.cols:
-                neighbors.append(f"{r}-{c}")
-    return neighbors
-
-
 @dataclass
 class AgentState:
     id: str

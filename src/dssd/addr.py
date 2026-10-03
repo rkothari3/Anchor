@@ -31,3 +31,14 @@ def split_addr(addr: str) -> tuple[str, int]:
         return host, int(rest)
     host, port = addr.rsplit(":", 1)
     return host, int(port)
+
+
+def parse_peers(values: list[str]) -> dict[str, str]:
+    """Turns repeated ``--peer id=host:port`` CLI values into an id -> addr map."""
+    peers: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"invalid --peer {value!r}, want id=host:port")
+        peer_id, addr = value.split("=", 1)
+        peers[peer_id] = addr
+    return peers

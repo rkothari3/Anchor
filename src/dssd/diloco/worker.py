@@ -15,8 +15,7 @@ import grpc
 import torch
 
 from dssd import dashboardpb, spinepb, trainerpb
-from dssd.addr import resolve_addr, split_addr
-from dssd.cmd.member import parse_peers
+from dssd.addr import parse_peers, resolve_addr, split_addr
 from dssd.membership import GRPCTransport
 from dssd.membership import Service as MembershipService
 from dssd.raft import Config as RaftConfig

@@ -8,20 +8,7 @@ from dssd.sharding.region_server import RegionServer
 from dssd.sharding.shard_raft import ChannelPool, ShardRaftManager
 from dssd.sharding.shard_state import ShardStateMachine
 from dssd.sharding.world import AgentState, GridConfig, shard_id_for
-
-
-async def eventually(cond, timeout: float = 5.0) -> None:
-    loop = asyncio.get_event_loop()
-    deadline = loop.time() + timeout
-    while True:
-        result = cond()
-        if asyncio.iscoroutine(result):
-            result = await result
-        if result:
-            return
-        if loop.time() >= deadline:
-            assert result, "condition not met within timeout"
-        await asyncio.sleep(0.02)
+from tests.support import eventually
 
 
 class NodeHarness:
