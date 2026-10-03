@@ -26,9 +26,7 @@ if _version_not_supported:
 
 
 class MembershipStub:
-    """Membership is the client-facing API for the shared membership/quorum
-    service. Applications (DiLoCo trainer, shard owners, ...) depend only
-    on this interface, never on SWIM or Raft internals directly.
+    """Membership: read-only view of the cluster as this node's SWIM sees it.
     """
 
     def __init__(self, channel):
@@ -37,75 +35,18 @@ class MembershipStub:
         Args:
             channel: A grpc.Channel.
         """
-        self.Join = channel.unary_unary(
-                '/dssd.spine.v1.Membership/Join',
-                request_serializer=spine__pb2.JoinRequest.SerializeToString,
-                response_deserializer=spine__pb2.JoinResponse.FromString,
-                _registered_method=True)
-        self.Leave = channel.unary_unary(
-                '/dssd.spine.v1.Membership/Leave',
-                request_serializer=spine__pb2.LeaveRequest.SerializeToString,
-                response_deserializer=spine__pb2.LeaveResponse.FromString,
-                _registered_method=True)
         self.GetMembers = channel.unary_unary(
                 '/dssd.spine.v1.Membership/GetMembers',
                 request_serializer=spine__pb2.GetMembersRequest.SerializeToString,
                 response_deserializer=spine__pb2.GetMembersResponse.FromString,
                 _registered_method=True)
-        self.GetQuorum = channel.unary_unary(
-                '/dssd.spine.v1.Membership/GetQuorum',
-                request_serializer=spine__pb2.GetQuorumRequest.SerializeToString,
-                response_deserializer=spine__pb2.GetQuorumResponse.FromString,
-                _registered_method=True)
-        self.GetLeader = channel.unary_unary(
-                '/dssd.spine.v1.Membership/GetLeader',
-                request_serializer=spine__pb2.GetLeaderRequest.SerializeToString,
-                response_deserializer=spine__pb2.GetLeaderResponse.FromString,
-                _registered_method=True)
-        self.Watch = channel.unary_stream(
-                '/dssd.spine.v1.Membership/Watch',
-                request_serializer=spine__pb2.WatchRequest.SerializeToString,
-                response_deserializer=spine__pb2.MembershipEvent.FromString,
-                _registered_method=True)
 
 
 class MembershipServicer:
-    """Membership is the client-facing API for the shared membership/quorum
-    service. Applications (DiLoCo trainer, shard owners, ...) depend only
-    on this interface, never on SWIM or Raft internals directly.
+    """Membership: read-only view of the cluster as this node's SWIM sees it.
     """
 
-    def Join(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def Leave(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def GetMembers(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetQuorum(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetLeader(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def Watch(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -114,35 +55,10 @@ class MembershipServicer:
 
 def add_MembershipServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Join': grpc.unary_unary_rpc_method_handler(
-                    servicer.Join,
-                    request_deserializer=spine__pb2.JoinRequest.FromString,
-                    response_serializer=spine__pb2.JoinResponse.SerializeToString,
-            ),
-            'Leave': grpc.unary_unary_rpc_method_handler(
-                    servicer.Leave,
-                    request_deserializer=spine__pb2.LeaveRequest.FromString,
-                    response_serializer=spine__pb2.LeaveResponse.SerializeToString,
-            ),
             'GetMembers': grpc.unary_unary_rpc_method_handler(
                     servicer.GetMembers,
                     request_deserializer=spine__pb2.GetMembersRequest.FromString,
                     response_serializer=spine__pb2.GetMembersResponse.SerializeToString,
-            ),
-            'GetQuorum': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetQuorum,
-                    request_deserializer=spine__pb2.GetQuorumRequest.FromString,
-                    response_serializer=spine__pb2.GetQuorumResponse.SerializeToString,
-            ),
-            'GetLeader': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetLeader,
-                    request_deserializer=spine__pb2.GetLeaderRequest.FromString,
-                    response_serializer=spine__pb2.GetLeaderResponse.SerializeToString,
-            ),
-            'Watch': grpc.unary_stream_rpc_method_handler(
-                    servicer.Watch,
-                    request_deserializer=spine__pb2.WatchRequest.FromString,
-                    response_serializer=spine__pb2.MembershipEvent.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -153,64 +69,8 @@ def add_MembershipServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Membership:
-    """Membership is the client-facing API for the shared membership/quorum
-    service. Applications (DiLoCo trainer, shard owners, ...) depend only
-    on this interface, never on SWIM or Raft internals directly.
+    """Membership: read-only view of the cluster as this node's SWIM sees it.
     """
-
-    @staticmethod
-    def Join(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.spine.v1.Membership/Join',
-            spine__pb2.JoinRequest.SerializeToString,
-            spine__pb2.JoinResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def Leave(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.spine.v1.Membership/Leave',
-            spine__pb2.LeaveRequest.SerializeToString,
-            spine__pb2.LeaveResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
 
     @staticmethod
     def GetMembers(request,
@@ -239,91 +99,11 @@ class Membership:
             metadata,
             _registered_method=True)
 
-    @staticmethod
-    def GetQuorum(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.spine.v1.Membership/GetQuorum',
-            spine__pb2.GetQuorumRequest.SerializeToString,
-            spine__pb2.GetQuorumResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetLeader(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/dssd.spine.v1.Membership/GetLeader',
-            spine__pb2.GetLeaderRequest.SerializeToString,
-            spine__pb2.GetLeaderResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def Watch(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/dssd.spine.v1.Membership/Watch',
-            spine__pb2.WatchRequest.SerializeToString,
-            spine__pb2.MembershipEvent.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
 
 class RaftStub:
-    """Raft is the internal peer-to-peer RPC used for leader election and log
-    replication among members. It is not part of the client-facing API.
+    """Raft: the two RPCs from the Raft paper (Figure 2). One node can host
+    several independent Raft groups (one per shard); `group` says which.
+    The DiLoCo workers use a single group named "".
     """
 
     def __init__(self, channel):
@@ -345,8 +125,9 @@ class RaftStub:
 
 
 class RaftServicer:
-    """Raft is the internal peer-to-peer RPC used for leader election and log
-    replication among members. It is not part of the client-facing API.
+    """Raft: the two RPCs from the Raft paper (Figure 2). One node can host
+    several independent Raft groups (one per shard); `group` says which.
+    The DiLoCo workers use a single group named "".
     """
 
     def RequestVote(self, request, context):
@@ -383,8 +164,9 @@ def add_RaftServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Raft:
-    """Raft is the internal peer-to-peer RPC used for leader election and log
-    replication among members. It is not part of the client-facing API.
+    """Raft: the two RPCs from the Raft paper (Figure 2). One node can host
+    several independent Raft groups (one per shard); `group` says which.
+    The DiLoCo workers use a single group named "".
     """
 
     @staticmethod

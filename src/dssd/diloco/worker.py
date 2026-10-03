@@ -16,8 +16,7 @@ import torch
 
 from dssd import spinepb, trainerpb
 from dssd.addr import parse_peers, resolve_addr, split_addr
-from dssd.membership import GRPCTransport
-from dssd.membership import Service as MembershipService
+from dssd.membership import GRPCTransport, MembershipService, RaftService
 from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
 from dssd.shutdown import install_shutdown_handler
@@ -148,8 +147,6 @@ async def run(args: argparse.Namespace) -> None:
     transport = GRPCTransport(peers)
     raft_node = Raft(RaftConfig(id=args.id, peers=list(peers.keys())), transport, asyncio.Queue())
     await raft_node.start()
-    membership_service = MembershipService(swim_node, raft_node)
-    membership_service.start()
 
     text = synthetic_corpus(args.corpus_length)
     tokenizer = CharTokenizer(text)
@@ -162,8 +159,8 @@ async def run(args: argparse.Namespace) -> None:
     worker = Worker(
         args.id, swim_node, raft_node, peer_addrs, model_cfg, data, inner_steps=args.inner_steps, batch_size=args.batch_size
     )
-    spinepb.add_MembershipServicer_to_server(membership_service, server)
-    spinepb.add_RaftServicer_to_server(membership_service, server)
+    spinepb.add_MembershipServicer_to_server(MembershipService(swim_node), server)
+    spinepb.add_RaftServicer_to_server(RaftService({"": raft_node}), server)
     trainerpb.add_TrainerServicer_to_server(worker, server)
     await server.start()
     logger.info("worker %s up: swim=%s grpc port=%d peers=%s", args.id, swim_node.addr, grpc_port, list(peers))
@@ -188,7 +185,6 @@ async def run(args: argparse.Namespace) -> None:
     train_task.cancel()
     await asyncio.gather(train_task, progress_task, return_exceptions=True)
     await server.stop(grace=2)
-    await membership_service.stop()
     await raft_node.stop()
     await swim_node.stop()
     await transport.close()

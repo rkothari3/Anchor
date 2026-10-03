@@ -1,119 +1,99 @@
-"""Replicates a shard's agent registry through that shard's own Raft
-log. Every replica - not just the leader - applies committed entries, so
-whichever replica wins the next election already has the full,
-up-to-date state and can resume serving immediately: this is what makes
-"no agent loss on kill" possible, as opposed to leader-election-only
-coordination (which the DiLoCo trainer used, since there the model
-state lived with the workers, not the coordinator).
+"""One shard: its own Raft group plus the agent registry that group
+replicates. Every replica applies every committed entry, so whichever
+replica wins the next election already has the full state. That is
+what makes "no agent loss when a region server dies" possible.
+
+Each log entry is a full snapshot of the shard's agents (JSON).
+ponytail: whole-state snapshots, so the log grows with every tick; switch
+to per-agent deltas + log compaction if shards ever hold many agents.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import asdict
 
 from dssd import raft
+from dssd.spinepb import LogEntry
 
 from .world import AgentState
 
 
-def encode_tick(agents: dict[str, AgentState]) -> bytes:
-    return json.dumps(
-        [{"id": a.id, "x": a.x, "y": a.y, "vx": a.vx, "vy": a.vy} for a in agents.values()]
-    ).encode()
-
-
-def decode_tick(data: bytes) -> dict[str, AgentState]:
-    return {a["id"]: AgentState(**a) for a in json.loads(data)}
-
-
 class ShardStateMachine:
-    """Applies a shard's committed Raft log entries to maintain a
-    replicated agent registry, and lets the current leader propose the
-    next tick's state."""
-
-    def __init__(self, shard_raft: raft.Raft, apply_queue: asyncio.Queue[raft.ApplyMsg]) -> None:
-        self.raft = shard_raft
-        self._apply_queue = apply_queue
+    def __init__(self, config: raft.Config, transport: raft.Transport) -> None:
+        self._apply_queue: asyncio.Queue[LogEntry] = asyncio.Queue()
+        self.raft = raft.Raft(config, transport, self._apply_queue)
         self.agents: dict[str, AgentState] = {}
         self._last_applied_index = 0
         self._apply_task: asyncio.Task | None = None
-        # Guards every "read agents, mutate, propose" sequence. Without
-        # it, the periodic tick loop and an incoming HandOff RPC can
-        # interleave: both read/mutate the same shared dict and each
-        # proposes a full snapshot, and whichever's proposal is applied
-        # last silently wins - a classic lost-update race, not a Raft
-        # bug. Holding this for the whole sequence (including
-        # propose_and_confirm's wait) serializes access per shard.
+        # Every "read agents, change them, propose a snapshot" sequence holds
+        # this lock, so the tick loop and an incoming hand-off can't
+        # interleave and silently overwrite each other's changes.
         self.lock = asyncio.Lock()
 
     async def start(self) -> None:
+        await self.raft.start()
         self._apply_task = asyncio.create_task(self._apply_loop())
 
     async def stop(self) -> None:
         if self._apply_task is not None:
             self._apply_task.cancel()
             await asyncio.gather(self._apply_task, return_exceptions=True)
+        await self.raft.stop()
+
+    def is_leader(self) -> bool:
+        return self.raft.state()[1]
 
     async def _apply_loop(self) -> None:
-        try:
-            while True:
-                msg = await self._apply_queue.get()
-                if msg.command:
-                    self.agents = decode_tick(msg.command)
-                # An empty command is the no-op every new leader proposes
-                # on election (see raft.Raft._become_leader) - it exists
-                # purely to unstick older, already-safe entries; it must
-                # not itself be treated as "replace agents with nothing."
-                self._last_applied_index = msg.index
-        except asyncio.CancelledError:
-            pass
+        while True:
+            entry = await self._apply_queue.get()
+            if entry.command:  # empty = a new leader's no-op, not "no agents"
+                self.agents = {a["id"]: AgentState(**a) for a in json.loads(entry.command)}
+            self._last_applied_index = entry.index
 
     def caught_up(self) -> bool:
-        """True once every entry in this replica's log has been applied.
-        A freshly elected leader's in-memory agents lag behind its log
-        until then, and a snapshot proposed from that stale state would
-        erase the entries still waiting to apply (an agent lost on
-        failover). Callers that mutate-then-snapshot must check this
-        (or ``wait_caught_up``) while holding ``lock``.
-        """
+        """True once every entry in our log has been applied. Until then a
+        new leader's agents are stale, and snapshotting them would erase the
+        entries still waiting to apply (an agent lost on failover). Check
+        this while holding `lock`, before changing agents."""
         return self._last_applied_index >= self.raft.last_index()
 
-    def propose_tick(self) -> bool:
-        """Proposes the current in-memory agent state as the next log
-        entry. Only takes effect if this node is still the shard's
-        leader; returns whether it was."""
-        _, _, is_leader = self.raft.propose(encode_tick(self.agents))
-        return is_leader
+    def propose_tick(self) -> None:
+        """Proposes the current agents as the next entry. Fire-and-forget:
+        if it never commits, the next tick's snapshot supersedes it."""
+        self.raft.propose(self._snapshot())
 
-    async def propose_and_confirm(self, timeout: float = 2.0) -> bool:
-        """Proposes the current in-memory agent state and waits for it
-        to actually commit, rather than just entering the log. Used
-        wherever a caller needs a real durability guarantee (e.g. hand-off)
-        instead of best-effort - once this returns True, the state is
-        replicated to a majority and will survive this node dying a
-        moment later.
-        """
-        index, term, is_leader = self.raft.propose(encode_tick(self.agents))
-        if not is_leader:
+    async def add_agent(self, agent: AgentState) -> bool:
+        """Adds an agent durably: returns True only once it's committed on a
+        majority, so it survives this node dying a moment later. Used both
+        to spawn agents and to accept hand-offs from neighbouring shards."""
+        async with self.lock:
+            if not await self.wait_caught_up():
+                return False
+            before = dict(self.agents)
+            self.agents[agent.id] = agent
+            index, _, is_leader = self.raft.propose(self._snapshot())
+            if is_leader and await self._wait_applied(index):
+                return True
+            self.agents = before
             return False
-        return await self._wait_applied(index, term, timeout)
 
-    async def wait_caught_up(self, timeout: float = 1.0) -> bool:
-        """Waits for this replica to apply its whole log, for one-shot
-        callers (spawn, hand-off) that can't just skip and retry the way
-        the tick loop does. False if leadership is lost or time runs out."""
+    async def wait_caught_up(self) -> bool:
+        """Waits for caught_up(), for callers that can't just skip and retry later."""
+        return await self._wait_applied(self.raft.last_index())
+
+    def _snapshot(self) -> bytes:
+        return json.dumps([asdict(a) for a in self.agents.values()]).encode()
+
+    async def _wait_applied(self, index: int, timeout: float = 2.0) -> bool:
+        """Waits until entry `index` is applied here, while we stay leader of the same term."""
         term, is_leader = self.raft.state()
-        return is_leader and await self._wait_applied(self.raft.last_index(), term, timeout)
-
-    async def _wait_applied(self, index: int, term: int, timeout: float) -> bool:
-        loop = asyncio.get_event_loop()
-        deadline = loop.time() + timeout
-        while loop.time() < deadline:
-            current_term, current_is_leader = self.raft.state()
-            if current_term != term or not current_is_leader:
-                return False  # superseded before applying
+        deadline = asyncio.get_running_loop().time() + timeout
+        while is_leader and self.raft.state() == (term, True):
             if self._last_applied_index >= index:
                 return True
+            if asyncio.get_running_loop().time() >= deadline:
+                return False
             await asyncio.sleep(0.01)
         return False

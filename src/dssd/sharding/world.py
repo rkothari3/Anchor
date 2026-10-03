@@ -1,9 +1,6 @@
-"""A bounded 2D world divided into a grid of shards (regions).
-
-Movement is deliberately simple - constant velocity, bounce off the
-world's edges - since the point of this module is the partitioning
-scheme, not the movement model (which the README explicitly treats as
-plumbing/application content, not core distributed-systems learning).
+"""A 2D world cut into a grid of shards (regions). Agents move at constant
+velocity and bounce off the edges; the movement is deliberately boring,
+since the point is the partitioning, not the simulation.
 """
 
 from __future__ import annotations
@@ -18,21 +15,16 @@ class GridConfig:
     cols: int
     rows: int
 
-    @property
-    def shard_width(self) -> float:
-        return self.width / self.cols
-
-    @property
-    def shard_height(self) -> float:
-        return self.height / self.rows
-
 
 def shard_id_for(x: float, y: float, grid: GridConfig) -> str:
-    col = int(x // grid.shard_width)
-    row = int(y // grid.shard_height)
-    col = min(max(col, 0), grid.cols - 1)
-    row = min(max(row, 0), grid.rows - 1)
+    """Shard ids are "row-col"; points outside the world clamp to the edge shard."""
+    col = min(max(int(x // (grid.width / grid.cols)), 0), grid.cols - 1)
+    row = min(max(int(y // (grid.height / grid.rows)), 0), grid.rows - 1)
     return f"{row}-{col}"
+
+
+def all_shard_ids(grid: GridConfig) -> list[str]:
+    return [f"{row}-{col}" for row in range(grid.rows) for col in range(grid.cols)]
 
 
 @dataclass
@@ -43,11 +35,9 @@ class AgentState:
     vx: float
     vy: float
 
-    def step(self, dt: float, world: GridConfig) -> None:
-        self.x += self.vx * dt
-        self.y += self.vy * dt
-        self.x, self.vx = _bounce(self.x, self.vx, world.width)
-        self.y, self.vy = _bounce(self.y, self.vy, world.height)
+    def step(self, dt: float, grid: GridConfig) -> None:
+        self.x, self.vx = _bounce(self.x + self.vx * dt, self.vx, grid.width)
+        self.y, self.vy = _bounce(self.y + self.vy * dt, self.vy, grid.height)
 
     def shard_id(self, grid: GridConfig) -> str:
         return shard_id_for(self.x, self.y, grid)

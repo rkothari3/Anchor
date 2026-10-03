@@ -1,7 +1,7 @@
 [project]
 name = "dssd"
 version = "0.1.0"
-description = "Fault-tolerant membership: SWIM failure detection + Raft leader election"
+description = "Learning distributed systems: SWIM, Raft, fault-tolerant DiLoCo training, and Raft-sharded simulation"
 requires-python = ">=3.11"
 dependencies = [
     "grpcio>=1.84",  # must be >= the grpcio-tools that generated src/dssd/*pb
@@ -11,7 +11,6 @@ dependencies = [
 ]
 
 [project.scripts]
-dssd-member = "dssd.cmd.member:main"
 dssd-worker = "dssd.diloco.worker:main"
 dssd-region = "dssd.sharding.cli:main"
 dssd-experiment = "dssd.diloco.experiment:main"

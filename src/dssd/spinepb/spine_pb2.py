@@ -24,55 +24,33 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bspine.proto\x12\rdssd.spine.v1\"b\n\x06Member\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\x12)\n\x05state\x18\x03 \x01(\x0e\x32\x1a.dssd.spine.v1.MemberState\x12\x13\n\x0bincarnation\x18\x04 \x01(\x04\"\'\n\x0bJoinRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\"6\n\x0cJoinResponse\x12&\n\x07members\x18\x01 \x03(\x0b\x32\x15.dssd.spine.v1.Member\"\x1a\n\x0cLeaveRequest\x12\n\n\x02id\x18\x01 \x01(\t\"\x0f\n\rLeaveResponse\"\x13\n\x11GetMembersRequest\"<\n\x12GetMembersResponse\x12&\n\x07members\x18\x01 \x03(\x0b\x32\x15.dssd.spine.v1.Member\"\x12\n\x10GetQuorumRequest\"Q\n\x11GetQuorumResponse\x12&\n\x07members\x18\x01 \x03(\x0b\x32\x15.dssd.spine.v1.Member\x12\x14\n\x0cview_version\x18\x02 \x01(\x04\"\x12\n\x10GetLeaderRequest\"4\n\x11GetLeaderResponse\x12\x11\n\tleader_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\"\x0e\n\x0cWatchRequest\"`\n\x0fMembershipEvent\x12&\n\x04type\x18\x01 \x01(\x0e\x32\x18.dssd.spine.v1.EventType\x12%\n\x06member\x18\x02 \x01(\x0b\x32\x15.dssd.spine.v1.Member\"8\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\r\n\x05index\x18\x02 \x01(\x04\x12\x0f\n\x07\x63ommand\x18\x03 \x01(\x0c\"d\n\x0fRequestVoteArgs\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\x12\x16\n\x0elast_log_index\x18\x03 \x01(\x04\x12\x15\n\rlast_log_term\x18\x04 \x01(\x04\"6\n\x10RequestVoteReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x14\n\x0cvote_granted\x18\x02 \x01(\x08\"\xa4\x01\n\x11\x41ppendEntriesArgs\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x11\n\tleader_id\x18\x02 \x01(\t\x12\x16\n\x0eprev_log_index\x18\x03 \x01(\x04\x12\x15\n\rprev_log_term\x18\x04 \x01(\x04\x12(\n\x07\x65ntries\x18\x05 \x03(\x0b\x32\x17.dssd.spine.v1.LogEntry\x12\x15\n\rleader_commit\x18\x06 \x01(\x04\"3\n\x12\x41ppendEntriesReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x0f\n\x07success\x18\x02 \x01(\x08*/\n\x0bMemberState\x12\t\n\x05\x41LIVE\x10\x00\x12\x0b\n\x07SUSPECT\x10\x01\x12\x08\n\x04\x44\x45\x41\x44\x10\x02*<\n\tEventType\x12\n\n\x06JOINED\x10\x00\x12\x08\n\x04LEFT\x10\x01\x12\n\n\x06\x46\x41ILED\x10\x02\x12\r\n\tRECOVERED\x10\x03\x32\xcc\x03\n\nMembership\x12?\n\x04Join\x12\x1a.dssd.spine.v1.JoinRequest\x1a\x1b.dssd.spine.v1.JoinResponse\x12\x42\n\x05Leave\x12\x1b.dssd.spine.v1.LeaveRequest\x1a\x1c.dssd.spine.v1.LeaveResponse\x12Q\n\nGetMembers\x12 .dssd.spine.v1.GetMembersRequest\x1a!.dssd.spine.v1.GetMembersResponse\x12N\n\tGetQuorum\x12\x1f.dssd.spine.v1.GetQuorumRequest\x1a .dssd.spine.v1.GetQuorumResponse\x12N\n\tGetLeader\x12\x1f.dssd.spine.v1.GetLeaderRequest\x1a .dssd.spine.v1.GetLeaderResponse\x12\x46\n\x05Watch\x12\x1b.dssd.spine.v1.WatchRequest\x1a\x1e.dssd.spine.v1.MembershipEvent0\x01\x32\xac\x01\n\x04Raft\x12N\n\x0bRequestVote\x12\x1e.dssd.spine.v1.RequestVoteArgs\x1a\x1f.dssd.spine.v1.RequestVoteReply\x12T\n\rAppendEntries\x12 .dssd.spine.v1.AppendEntriesArgs\x1a!.dssd.spine.v1.AppendEntriesReplyb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bspine.proto\x12\rdssd.spine.v1\"b\n\x06Member\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x61\x64\x64r\x18\x02 \x01(\t\x12)\n\x05state\x18\x03 \x01(\x0e\x32\x1a.dssd.spine.v1.MemberState\x12\x13\n\x0bincarnation\x18\x04 \x01(\x04\"\x13\n\x11GetMembersRequest\"<\n\x12GetMembersResponse\x12&\n\x07members\x18\x01 \x03(\x0b\x32\x15.dssd.spine.v1.Member\"8\n\x08LogEntry\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\r\n\x05index\x18\x02 \x01(\x04\x12\x0f\n\x07\x63ommand\x18\x03 \x01(\x0c\"s\n\x0fRequestVoteArgs\x12\r\n\x05group\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12\x14\n\x0c\x63\x61ndidate_id\x18\x03 \x01(\t\x12\x16\n\x0elast_log_index\x18\x04 \x01(\x04\x12\x15\n\rlast_log_term\x18\x05 \x01(\x04\"6\n\x10RequestVoteReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x14\n\x0cvote_granted\x18\x02 \x01(\x08\"\xb3\x01\n\x11\x41ppendEntriesArgs\x12\r\n\x05group\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x04\x12\x11\n\tleader_id\x18\x03 \x01(\t\x12\x16\n\x0eprev_log_index\x18\x04 \x01(\x04\x12\x15\n\rprev_log_term\x18\x05 \x01(\x04\x12(\n\x07\x65ntries\x18\x06 \x03(\x0b\x32\x17.dssd.spine.v1.LogEntry\x12\x15\n\rleader_commit\x18\x07 \x01(\x04\"3\n\x12\x41ppendEntriesReply\x12\x0c\n\x04term\x18\x01 \x01(\x04\x12\x0f\n\x07success\x18\x02 \x01(\x08*/\n\x0bMemberState\x12\t\n\x05\x41LIVE\x10\x00\x12\x0b\n\x07SUSPECT\x10\x01\x12\x08\n\x04\x44\x45\x41\x44\x10\x02\x32_\n\nMembership\x12Q\n\nGetMembers\x12 .dssd.spine.v1.GetMembersRequest\x1a!.dssd.spine.v1.GetMembersResponse2\xac\x01\n\x04Raft\x12N\n\x0bRequestVote\x12\x1e.dssd.spine.v1.RequestVoteArgs\x1a\x1f.dssd.spine.v1.RequestVoteReply\x12T\n\rAppendEntries\x12 .dssd.spine.v1.AppendEntriesArgs\x1a!.dssd.spine.v1.AppendEntriesReplyb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'spine_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_MEMBERSTATE']._serialized_start=1082
-  _globals['_MEMBERSTATE']._serialized_end=1129
-  _globals['_EVENTTYPE']._serialized_start=1131
-  _globals['_EVENTTYPE']._serialized_end=1191
+  _globals['_MEMBERSTATE']._serialized_start=679
+  _globals['_MEMBERSTATE']._serialized_end=726
   _globals['_MEMBER']._serialized_start=30
   _globals['_MEMBER']._serialized_end=128
-  _globals['_JOINREQUEST']._serialized_start=130
-  _globals['_JOINREQUEST']._serialized_end=169
-  _globals['_JOINRESPONSE']._serialized_start=171
-  _globals['_JOINRESPONSE']._serialized_end=225
-  _globals['_LEAVEREQUEST']._serialized_start=227
-  _globals['_LEAVEREQUEST']._serialized_end=253
-  _globals['_LEAVERESPONSE']._serialized_start=255
-  _globals['_LEAVERESPONSE']._serialized_end=270
-  _globals['_GETMEMBERSREQUEST']._serialized_start=272
-  _globals['_GETMEMBERSREQUEST']._serialized_end=291
-  _globals['_GETMEMBERSRESPONSE']._serialized_start=293
-  _globals['_GETMEMBERSRESPONSE']._serialized_end=353
-  _globals['_GETQUORUMREQUEST']._serialized_start=355
-  _globals['_GETQUORUMREQUEST']._serialized_end=373
-  _globals['_GETQUORUMRESPONSE']._serialized_start=375
-  _globals['_GETQUORUMRESPONSE']._serialized_end=456
-  _globals['_GETLEADERREQUEST']._serialized_start=458
-  _globals['_GETLEADERREQUEST']._serialized_end=476
-  _globals['_GETLEADERRESPONSE']._serialized_start=478
-  _globals['_GETLEADERRESPONSE']._serialized_end=530
-  _globals['_WATCHREQUEST']._serialized_start=532
-  _globals['_WATCHREQUEST']._serialized_end=546
-  _globals['_MEMBERSHIPEVENT']._serialized_start=548
-  _globals['_MEMBERSHIPEVENT']._serialized_end=644
-  _globals['_LOGENTRY']._serialized_start=646
-  _globals['_LOGENTRY']._serialized_end=702
-  _globals['_REQUESTVOTEARGS']._serialized_start=704
-  _globals['_REQUESTVOTEARGS']._serialized_end=804
-  _globals['_REQUESTVOTEREPLY']._serialized_start=806
-  _globals['_REQUESTVOTEREPLY']._serialized_end=860
-  _globals['_APPENDENTRIESARGS']._serialized_start=863
-  _globals['_APPENDENTRIESARGS']._serialized_end=1027
-  _globals['_APPENDENTRIESREPLY']._serialized_start=1029
-  _globals['_APPENDENTRIESREPLY']._serialized_end=1080
-  _globals['_MEMBERSHIP']._serialized_start=1194
-  _globals['_MEMBERSHIP']._serialized_end=1654
-  _globals['_RAFT']._serialized_start=1657
-  _globals['_RAFT']._serialized_end=1829
+  _globals['_GETMEMBERSREQUEST']._serialized_start=130
+  _globals['_GETMEMBERSREQUEST']._serialized_end=149
+  _globals['_GETMEMBERSRESPONSE']._serialized_start=151
+  _globals['_GETMEMBERSRESPONSE']._serialized_end=211
+  _globals['_LOGENTRY']._serialized_start=213
+  _globals['_LOGENTRY']._serialized_end=269
+  _globals['_REQUESTVOTEARGS']._serialized_start=271
+  _globals['_REQUESTVOTEARGS']._serialized_end=386
+  _globals['_REQUESTVOTEREPLY']._serialized_start=388
+  _globals['_REQUESTVOTEREPLY']._serialized_end=442
+  _globals['_APPENDENTRIESARGS']._serialized_start=445
+  _globals['_APPENDENTRIESARGS']._serialized_end=624
+  _globals['_APPENDENTRIESREPLY']._serialized_start=626
+  _globals['_APPENDENTRIESREPLY']._serialized_end=677
+  _globals['_MEMBERSHIP']._serialized_start=728
+  _globals['_MEMBERSHIP']._serialized_end=823
+  _globals['_RAFT']._serialized_start=826
+  _globals['_RAFT']._serialized_end=998
 # @@protoc_insertion_point(module_scope)
