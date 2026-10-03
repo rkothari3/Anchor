@@ -33,7 +33,7 @@ jobs:
       - run: npm run build
         working-directory: site
         env:
-          SITE_BASE: /DSSD/
+          SITE_BASE: /Anchor/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

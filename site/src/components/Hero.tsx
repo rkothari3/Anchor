@@ -4,7 +4,7 @@ import { PacketLayer } from "./PacketLayer";
 
 const S = 360;
 const pts = Array.from({ length: 5 }, (_, i) => ringPoint(i, 5, S / 2, S / 2, 120));
-const REPO = "https://github.com/rkothari3/DSSD";
+const REPO = "https://github.com/rkothari3/Anchor";
 
 function Orbit() {
   const { consensus, status } = useEngine();

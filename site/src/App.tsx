@@ -5,7 +5,7 @@ import { Limits } from "./components/Limits";
 import { Training } from "./components/Training";
 import { World } from "./components/World";
 
-const REPO = "https://github.com/rkothari3/DSSD";
+const REPO = "https://github.com/rkothari3/Anchor";
 
 export function App() {
   return (

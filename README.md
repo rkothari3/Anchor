@@ -4,7 +4,7 @@ Spot GPUs get killed mid-run. Anchor notices the dead worker and keeps the rest 
 
 Built from scratch in Python: SWIM failure detection, Raft consensus, and fault-tolerant DiLoCo training.
 
-**[Try it live](https://rkothari3.github.io/DSSD/)**: the real code runs in your browser. Crash nodes, split the network, drop packets.
+**[Try it live](https://rkothari3.github.io/Anchor/)**: the real code runs in your browser. Crash nodes, split the network, drop packets.
 
 ![Killing the leader of a 5-node Raft cluster](docs/img/failover.gif)
 
@@ -36,4 +36,4 @@ pip install -e ".[dev]" && pytest   # 52 tests
 cd site && npm ci && npm run dev    # the website
 ```
 
-Anchor lives in the `dssd` repo. Code is in `src/dssd/` (`swim.py`, `raft.py`, `diloco/`, `sharding/`).
+Code is in `src/dssd/` (`swim.py`, `raft.py`, `diloco/`, `sharding/`).
