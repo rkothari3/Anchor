@@ -1,6 +1,6 @@
 import pytest
 
-from dssd.addr import parse_peers, resolve_addr
+from dssd.addr import parse_peers, resolve_addr, self_addr
 
 
 def test_resolve_addr_resolves_hostname_to_numeric_ip():
@@ -15,3 +15,8 @@ def test_parse_peers():
     assert parse_peers(["a=h1:1", "b=h2:2"]) == {"a": "h1:1", "b": "h2:2"}
     with pytest.raises(ValueError):
         parse_peers(["no-equals-sign"])
+
+
+def test_self_addr_replaces_wildcard_bind_hosts():
+    assert self_addr("0.0.0.0:0", 9000) == "127.0.0.1:9000"
+    assert self_addr("10.0.0.5:0", 9000) == "10.0.0.5:9000"

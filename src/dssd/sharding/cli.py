@@ -16,7 +16,7 @@ import logging
 import grpc
 
 from dssd import raft, regionpb, spinepb
-from dssd.addr import parse_peers
+from dssd.addr import parse_peers, self_addr
 from dssd.membership import GRPCTransport, RaftService
 from dssd.shutdown import install_shutdown_handler
 
@@ -47,7 +47,7 @@ async def run(args: argparse.Namespace) -> None:
     await server.start()
     logger.info("region %s up on port %d, shards %s", args.id, port, list(shards))
 
-    region = RegionServer(grid, shards, {**peers, args.id: f"127.0.0.1:{port}"}, tick_interval=args.tick_interval)
+    region = RegionServer(grid, shards, {**peers, args.id: self_addr(args.grpc_addr, port)}, tick_interval=args.tick_interval)
     await asyncio.sleep(1.0)  # let the elections settle before spawning
     for spec in args.spawn:
         agent_id, x, y, vx, vy = spec.split(",")

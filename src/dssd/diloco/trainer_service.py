@@ -42,11 +42,12 @@ class TrainerService(trainerpb.TrainerServicer):
         momentum: float = 0.9,
         nesterov: bool = True,
         round_timeout: float = 10.0,
+        start_round: int = 0,
     ) -> None:
         self._get_quorum = get_quorum
         self._outer = OuterOptimizer(initial_global_state, lr=lr, momentum=momentum, nesterov=nesterov)
         self._global_state = {k: v.clone() for k, v in initial_global_state.items()}
-        self._round = 0
+        self._round = start_round
         self._round_timeout = round_timeout
 
         self._pending: dict[str, StateDict] = {}

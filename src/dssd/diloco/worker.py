@@ -15,7 +15,7 @@ import grpc
 import torch
 
 from dssd import spinepb, trainerpb
-from dssd.addr import parse_peers, resolve_addr, split_addr
+from dssd.addr import parse_peers, resolve_addr, self_addr, split_addr
 from dssd.membership import GRPCTransport, MembershipService, RaftService
 from dssd.raft import Config as RaftConfig
 from dssd.raft import Raft
@@ -80,9 +80,13 @@ class Worker(trainerpb.TrainerServicer):
             await context.abort(grpc.StatusCode.FAILED_PRECONDITION, f"not the leader for term {request.term}")
         if self._barrier_term != term:
             # New term: start a fresh barrier from this node's own latest
-            # global state, so training continues where the group left off.
+            # global state and round, so training continues where the group
+            # left off. ponytail: the outer optimizer's momentum restarts on
+            # each leader change; replicate it if that ever hurts convergence.
             global_state = {k: v.clone() for k, v in self.global_state.items()}
-            self._barrier = TrainerService(self._alive_members, global_state, round_timeout=self._round_timeout)
+            self._barrier = TrainerService(
+                self._alive_members, global_state, round_timeout=self._round_timeout, start_round=self.round
+            )
             self._barrier_term = term
         assert self._barrier is not None
         return await self._barrier.Sync(request, context)
@@ -155,7 +159,7 @@ async def run(args: argparse.Namespace) -> None:
 
     server = grpc.aio.server()
     grpc_port = server.add_insecure_port(args.grpc_addr)
-    peer_addrs = {**peers, args.id: f"127.0.0.1:{grpc_port}"}  # the leader may be this very process
+    peer_addrs = {**peers, args.id: self_addr(args.grpc_addr, grpc_port)}  # the leader may be this very process
     worker = Worker(
         args.id, swim_node, raft_node, peer_addrs, model_cfg, data, inner_steps=args.inner_steps, batch_size=args.batch_size
     )
