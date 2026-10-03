@@ -12,8 +12,7 @@ import logging
 import grpc
 
 from dssd import regionpb
-from dssd.addr import split_addr
-from dssd.cmd.member import parse_peers
+from dssd.addr import parse_peers, split_addr
 from dssd.shutdown import install_shutdown_handler
 
 from .handoff import RegionOwnerService

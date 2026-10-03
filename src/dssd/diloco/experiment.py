@@ -13,7 +13,7 @@ import random
 import subprocess
 from pathlib import Path
 
-from dssd.cmd.member import parse_peers
+from dssd.addr import parse_peers
 from dssd.dashboard.poller import Poller
 
 from .chaos import ChaosScheduler, pick_victim

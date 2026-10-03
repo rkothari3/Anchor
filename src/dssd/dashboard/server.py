@@ -13,8 +13,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from dssd.addr import split_addr
-from dssd.cmd.member import parse_peers
+from dssd.addr import parse_peers, split_addr
 
 from .poller import Poller
 
