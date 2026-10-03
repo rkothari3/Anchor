@@ -8,7 +8,8 @@ This report was the design document; the project was then built in Python on top
   (DiLoCo training on a local `kind` cluster, surviving pod kills, with the
   loss-vs-wall-clock data at 0/5/20 kills in `results/`), and Stage 3 (spatial
   sharding: per-shard Raft ownership + fenced cross-shard agent hand-off).
-- **Not implemented:** Stage 4 (optional real-cloud chaos), and a dashboard (to be rebuilt).
+- **Not implemented:** Stage 4 (optional real-cloud chaos).
+- **Live demo:** [rkothari3.github.io/DSSD](https://rkothari3.github.io/DSSD/). The real SWIM, Raft and sharding code runs in your browser (Pyodide) so you can crash nodes and split the network. Source in `site/`; `src/dssd/playground.py` is the in-memory network that drives it.
 
 **Code map** (`src/dssd/`), in reading order:
 

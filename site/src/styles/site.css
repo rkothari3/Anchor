@@ -239,6 +239,8 @@ h1 {
 /* SVG stage */
 .ring {
   width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
   height: auto;
   display: block;
   overflow: visible;
@@ -289,7 +291,7 @@ h1 {
   font-weight: 500;
 }
 .node-sub {
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .node-role {
   font: 500 11px var(--font-sans);
@@ -322,11 +324,6 @@ h1 {
 }
 .shard-sub {
   font-size: 10.5px;
-}
-.own {
-  stroke-width: 1;
-  opacity: 0.35;
-  stroke-dasharray: 3 4;
 }
 .agent {
   transition: transform 0.55s linear;
@@ -726,7 +723,7 @@ input[type="range"]:disabled {
 }
 @media (max-width: 860px) {
   .hood-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .stack {

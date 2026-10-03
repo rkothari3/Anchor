@@ -15,7 +15,8 @@ export function EventFeed({ events, label }: { events: FeedEvent[]; label: strin
   return (
     <div className="feed">
       <h3 className="panel-title">{label}</h3>
-      <ol className="feed-list" role="log" aria-live="polite" aria-relevant="additions">
+      <div role="log" aria-live="polite" aria-relevant="additions">
+      <ol className="feed-list">
         {events.length === 0 && <li className="feed-empty">Waiting for the first event…</li>}
         {[...events].reverse().map((e, i) => (
           <li key={`${e.t}-${events.length - i}`}>
@@ -25,6 +26,7 @@ export function EventFeed({ events, label }: { events: FeedEvent[]; label: strin
           </li>
         ))}
       </ol>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,7 @@ const COLOR: Record<number, string> = { 0: "var(--accent)", 5: "var(--blue)", 20
 const DURATION = 240; // every run is a 240 s experiment; kills are evenly spaced across it (experiment.py:kill_schedule)
 const W = 760;
 const H = 360;
-const M = { l: 48, r: 16, t: 16, b: 46 };
+const M = { l: 48, r: 16, t: 30, b: 46 };
 const YMAX = 1.8;
 const x = (t: number) => M.l + (t / DURATION) * (W - M.l - M.r);
 const y = (v: number) => M.t + (1 - v / YMAX) * (H - M.t - M.b);
@@ -113,7 +113,7 @@ export function Training() {
             {ticks.map((s) => (
               <text key={s} className="axis mono" x={x(s)} y={H - M.b + 20} textAnchor="middle">{s}s</text>
             ))}
-            <text className="axis-title mono" x={M.l - 38} y={M.t + 4} textAnchor="start">loss</text>
+            <text className="axis-title mono" x={M.l - 38} y={12} textAnchor="start">loss</text>
             {runs.map((r, ri) =>
               killTimes(r.kills).map((k) => (
                 <line key={`${r.kills}-${k}`} className="kill" x1={x(k)} x2={x(k)} y1={H - M.b + 28 + ri * 4} y2={H - M.b + 34 + ri * 4} stroke={COLOR[r.kills]} />

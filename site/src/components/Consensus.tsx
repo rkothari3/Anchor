@@ -6,9 +6,8 @@ import { Boot } from "./Boot";
 import { EventFeed } from "./EventFeed";
 import { PacketLayer } from "./PacketLayer";
 
-const W = 560;
 const H = 440;
-const C = { x: W / 2, y: H / 2 + 6 };
+const C = { x: 280, y: H / 2 + 6 };
 const R = 158;
 const SPLIT = [["n1", "n2"], ["n3", "n4", "n5"]];
 const DEFAULT_LATENCY = 0.08;
@@ -137,11 +136,11 @@ export function Consensus() {
 
           <div className="play-grid">
             <div className="stage">
-              <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Five-node cluster" className={`ring ${cut ? "cut" : ""}`}>
+              <svg viewBox="80 0 400 430" role="group" aria-label="Five-node cluster" className={`ring ${cut ? "cut" : ""}`}>
                 {snap && cut && (
                   <g aria-hidden="true">
                     <line className="split" x1={C.x - 120} y1={32} x2={C.x + 20} y2={H - 14} />
-                    <text className="split-label mono" x={C.x - 150} y={22}>network split</text>
+                    <text className="split-label mono" x={C.x - 190} y={22}>network split</text>
                   </g>
                 )}
                 {snap &&

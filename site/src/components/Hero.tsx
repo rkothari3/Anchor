@@ -42,7 +42,7 @@ export function Hero() {
     <header className="hero">
       <div className="wrap hero-grid">
         <div>
-          <p className="eyebrow">Distributed systems · from scratch · Python</p>
+          <p className="eyebrow">Distributed systems · from scratch</p>
           <h1>Break a distributed system. Watch it heal.</h1>
           <p className="lede">
             Failure detection, consensus and fault-tolerant training, built from first principles. The code on this page is <strong>the real implementation</strong>, running live in your browser. Crash a node, split the network and see what survives.

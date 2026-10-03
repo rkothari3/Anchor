@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { engine, useEngine } from "../engine/client";
 import type { WorldSnapshot } from "../engine/types";
 import { useSeen } from "../lib/useInView";
+import { useMedia } from "../lib/useMedia";
 import type { Pt } from "../lib/cluster";
 import { Boot } from "./Boot";
 import { EventFeed } from "./EventFeed";
@@ -9,13 +10,16 @@ import { PacketLayer } from "./PacketLayer";
 
 const G = { x: 8, y: 8, size: 400 };
 const OWNER = ["#5eead4", "#7aa7ff", "#c9a7ff"];
-const serverPos = (i: number): Pt => ({ x: 548, y: 82 + i * 128 });
+const wideServer = (i: number): Pt => ({ x: 548, y: 82 + i * 128 });
+const narrowServer = (i: number): Pt => ({ x: 76 + i * 132, y: 462 });
 
 export function World() {
   const { world, status } = useEngine();
   const [ref, seen] = useSeen<HTMLElement>();
   const snap: WorldSnapshot | null = world.snapshot;
   const live = snap && status === "ready";
+  const narrow = useMedia("(max-width: 640px)");
+  const serverPos = narrow ? narrowServer : wideServer;
 
   useEffect(() => {
     if (seen) engine.start("world");
@@ -26,10 +30,6 @@ export function World() {
   const cell = G.size / (snap?.grid.cols ?? 2);
   const scale = G.size / (snap?.grid.w ?? 20);
   const call = (method: string, ...args: unknown[]) => engine.call("world", method, ...args);
-  const shardCenter = (id: string): Pt => {
-    const [row, col] = id.split("-").map(Number);
-    return { x: G.x + col * cell + cell / 2, y: G.y + row * cell + cell / 2 };
-  };
   const serverAt = (id: string) => {
     const i = snap?.nodes.findIndex((n) => n.id === id) ?? -1;
     return i < 0 ? undefined : serverPos(i);
@@ -53,7 +53,7 @@ export function World() {
               <span className="banner-dot" aria-hidden="true" />
               {stats ? (
                 <>
-                  <b className="mono">{stats.total - stats.lost}/{stats.total}</b>&nbsp;agents accounted for · lost <b className="mono">{stats.lost}</b> · in transit <b className="mono">{stats.duplicated}</b>
+                  <b className="mono">{stats.total - stats.lost}/{stats.total}</b>&nbsp;agents · lost <b className="mono">{stats.lost}</b> · in transit <b className="mono">{stats.duplicated}</b>
                 </>
               ) : (
                 "Waiting for the first snapshot"
@@ -63,12 +63,10 @@ export function World() {
 
           <div className="play-grid">
             <div className="stage">
-              <svg viewBox="0 0 640 416" role="group" aria-label="Sharded world" className="ring">
+              <svg viewBox={narrow ? "0 0 416 500" : "0 0 640 416"} role="group" aria-label="Sharded world" className="ring">
                 {snap?.shards.map((s) => {
                   const [row, col] = s.id.split("-").map(Number);
                   const c = color(s.leader);
-                  const mid = shardCenter(s.id);
-                  const srv = s.leader ? serverAt(s.leader) : undefined;
                   return (
                     <g key={s.id}>
                       <rect className="shard" x={G.x + col * cell + 3} y={G.y + row * cell + 3} width={cell - 6} height={cell - 6} rx={14} fill={c} fillOpacity={s.leader ? 0.07 : 0.02} stroke={c} strokeOpacity={s.leader ? 0.5 : 0.3} strokeDasharray={s.leader ? undefined : "5 5"} />
@@ -78,7 +76,6 @@ export function World() {
                       <text className="shard-sub mono" x={G.x + col * cell + 16} y={G.y + row * cell + 46} fill="var(--muted)">
                         {s.leader ? `led by ${s.leader} · term ${s.term}` : "electing a leader…"}
                       </text>
-                      {srv && <path className="own" d={`M${mid.x} ${mid.y} Q ${(mid.x + srv.x - 50) / 2} ${(mid.y + srv.y) / 2} ${srv.x - 58} ${srv.y}`} stroke={c} fill="none" />}
                     </g>
                   );
                 })}
